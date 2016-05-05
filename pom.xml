@@ -6,9 +6,23 @@
     <version>1.580</version><!-- which version of Jenkins is this plugin built against? -->
   </parent>
 
+  <developers>
+    <developer>
+      <id>sanderv32</id>
+      <name>Alexander Verhaar</name>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
+
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>gogs-webhook</artifactId>
-  <version>0.8.13</version>
+  <version>0.8.45</version>
   <packaging>hpi</packaging>
   <name>Jenkins Gogs plugin</name>
   <description>Adds Gogs integration to Jenkins</description>

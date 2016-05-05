@@ -49,18 +49,18 @@ public class GogsPayloadProcessor {
 
     SecurityContext old = Jenkins.getInstance().getACL().impersonate(ACL.SYSTEM);
     for (AbstractProject<?,?> project : Jenkins.getInstance().getAllItems(AbstractProject.class)) {
-      if ( project.getName().equals(jobName)) {
+      if ( project.getName().equals(jobName) ) {
 
         Cause cause = new GogsCause(deliveryID);
         project.scheduleBuild(0, cause);
         didJob = true;
-        result.Message = String.format("Job '%s' is executed",jobName);
+        result.setMessage(String.format("Job '%s' is executed",jobName));
       }
     }
     if (!didJob) {
-      result.Status = 404;
-      result.Message = String.format("Job '%s' is not defined in Jenkins",jobName);
-      LOGGER.warning(result.Message);
+      String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
+      result.setStatus(404, msg);
+      LOGGER.warning(msg);
     }
     SecurityContextHolder.setContext(old);
 
