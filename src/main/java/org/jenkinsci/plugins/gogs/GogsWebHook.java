@@ -24,6 +24,8 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package org.jenkinsci.plugins.gogs;
 
 import hudson.Extension;
+import hudson.tasks.Builder;
+import hudson.model.Descriptor;
 import hudson.model.UnprotectedRootAction;
 
 import java.util.Map;
@@ -41,6 +43,8 @@ import javax.servlet.ServletException;
 
 import net.sf.json.JSONObject;
 
+import jenkins.model.Jenkins;
+
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
@@ -54,6 +58,7 @@ import org.kohsuke.stapler.StaplerResponse;
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
     public static final String URLNAME = "gogs-webhook";
+    private Jenkins jenkins = Jenkins.getInstance();
     private StaplerResponse resp;
 
     public String getDisplayName() {
@@ -77,6 +82,7 @@ public class GogsWebHook implements UnprotectedRootAction {
     public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
       GogsResults result = new GogsResults();
       GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+      GogsProjectProperty.DescriptorImpl projectProperty = jenkins.getDescriptorByType(GogsProjectProperty.DescriptorImpl.class);
       this.resp = rsp;
 
       // Get X-Gogs-Event
@@ -88,7 +94,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
       // Get X-Gogs-Delivery header with deliveryID
       String gogsDelivery = req.getHeader("X-Gogs-Delivery");
-      if (gogsDelivery.isEmpty()) {
+      if ( gogsDelivery==null && gogsDelivery.isEmpty() ) {
         gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
       } else {
         gogsDelivery = "Gogs-ID: " + gogsDelivery;
@@ -97,7 +103,7 @@ public class GogsWebHook implements UnprotectedRootAction {
       // Get querystring from the URI
       Map querystring = splitQuery(req.getQueryString());
       String jobName = querystring.get("job").toString();
-      if ( jobName!=null && jobName.isEmpty()) {
+      if ( jobName!=null && jobName.isEmpty() ) {
         result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
         exitWebHook(result);
       }
@@ -114,9 +120,28 @@ public class GogsWebHook implements UnprotectedRootAction {
         }
 
         JSONObject jsonObject = JSONObject.fromObject(body);
+        String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
+        String jSecret = projectProperty.getGogsSecret(); /* Secret provided by Jenkins */
         String url = jsonObject.getJSONObject("repository").getString("url");
 
-        result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        if ( gSecret!=null && !gSecret.isEmpty() ) {
+          /* Gogs secret is set */
+          if ( jSecret!=null && !jSecret.isEmpty()) {
+            /* Jenkins secret is set */
+            if  ( !jSecret.equals(gSecret) ) {
+              /* Gogs and Jenkins secrets differs */
+              result.setStatus(403, "Incorrect secret");
+            } else {
+              /* Password is set in Jenkins and Gogs, and is correct */
+              result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+            }
+          } else {
+            result.setStatus(403, "Incorrect secret");
+          }
+        } else {
+          /* No password is set in Jenkins or Gogs, run without secrets */
+          result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        }
       } else {
         result.setStatus(404, "No payload or URI contains invalid entries.");
       }
@@ -130,13 +155,13 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @param results GogsResults
      */
     private void exitWebHook(GogsResults result)  throws IOException {
-      if ( result.Status != 200 ) {
-        LOGGER.warning(result.Message);
+      if ( result.getStatus() != 200 ) {
+        LOGGER.warning(result.getMessage());
       }
       JSONObject json = new JSONObject();
-      json.put("result", result.Status==200 ? "OK" : "ERROR");
-      json.put("message", result.Message);
-      resp.setStatus(result.Status);
+      json.put("result", result.getStatus()==200 ? "OK" : "ERROR");
+      json.put("message", result.getMessage());
+      resp.setStatus(result.getStatus());
       resp.addHeader("Content-Type","application/json");
       resp.getWriter().print(json.toString());
     }

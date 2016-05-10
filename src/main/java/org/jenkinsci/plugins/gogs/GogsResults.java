@@ -24,16 +24,28 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package org.jenkinsci.plugins.gogs;
 
 public class GogsResults {
-    int Status;
-    String Message;
+    private int Status;
+    private String Message;
 
     public GogsResults() {
       this.Status = 200;
       this.Message = "OK";
     }
 
+    public void setMessage(String msg) {
+      this.Message = msg;
+    }
+
     public void setStatus(int status, String msg) {
       this.Status = status;
       this.Message = msg;
+    }
+
+    public int getStatus() {
+      return this.Status;
+    }
+
+    public String getMessage() {
+      return this.Message;
     }
 }
