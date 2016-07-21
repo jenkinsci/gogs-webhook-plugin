@@ -32,7 +32,6 @@ import hudson.model.Cause;
 import hudson.security.ACL;
 import hudson.model.AbstractProject;
 import jenkins.model.Jenkins;
-import hudson.model.Cause;
 
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -44,25 +43,36 @@ public class GogsPayloadProcessor {
   }
 
   public GogsResults triggerJobs(String jobName, String deliveryID) {
+    SecurityContext saveCtx = null;
     Boolean didJob = false;
     GogsResults result = new GogsResults();
 
-    SecurityContext old = Jenkins.getInstance().getACL().impersonate(ACL.SYSTEM);
-    for (AbstractProject<?,?> project : Jenkins.getInstance().getAllItems(AbstractProject.class)) {
-      if ( project.getName().equals(jobName) ) {
+    try {
+      saveCtx = SecurityContextHolder.getContext();
 
-        Cause cause = new GogsCause(deliveryID);
-        project.scheduleBuild(0, cause);
-        didJob = true;
-        result.setMessage(String.format("Job '%s' is executed",jobName));
+      Jenkins instance = Jenkins.getInstance();
+      if (instance!=null) {
+        ACL acl = instance.getACL();
+        acl.impersonate(ACL.SYSTEM);
+        for (AbstractProject<?,?> project : instance.getAllItems(AbstractProject.class)) {
+          if ( project.getName().equals(jobName) ) {
+
+            Cause cause = new GogsCause(deliveryID);
+            project.scheduleBuild(0, cause);
+            didJob = true;
+            result.setMessage(String.format("Job '%s' is executed",jobName));
+          }
+        }
+        if (!didJob) {
+          String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
+          result.setStatus(404, msg);
+          LOGGER.warning(msg);
+        }
       }
+    } catch (Exception e) {
+    } finally {
+        SecurityContextHolder.setContext(saveCtx);
     }
-    if (!didJob) {
-      String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
-      result.setStatus(404, msg);
-      LOGGER.warning(msg);
-    }
-    SecurityContextHolder.setContext(old);
 
     return result;
   }

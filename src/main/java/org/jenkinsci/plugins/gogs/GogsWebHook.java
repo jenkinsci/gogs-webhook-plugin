@@ -77,9 +77,9 @@ public class GogsWebHook implements UnprotectedRootAction {
      * Receives the HTTP POST request send by Gogs.
      *
      * @param req request
-     * @return response to the request
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
+      String url = null;
       GogsResults result = new GogsResults();
       GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
       GogsProjectProperty.DescriptorImpl projectProperty = jenkins.getDescriptorByType(GogsProjectProperty.DescriptorImpl.class);
@@ -94,7 +94,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
       // Get X-Gogs-Delivery header with deliveryID
       String gogsDelivery = req.getHeader("X-Gogs-Delivery");
-      if ( gogsDelivery==null && gogsDelivery.isEmpty() ) {
+      if ( gogsDelivery==null || gogsDelivery.isEmpty() ) {
         gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
       } else {
         gogsDelivery = "Gogs-ID: " + gogsDelivery;
@@ -122,7 +122,10 @@ public class GogsWebHook implements UnprotectedRootAction {
         JSONObject jsonObject = JSONObject.fromObject(body);
         String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
         String jSecret = projectProperty.getGogsSecret(); /* Secret provided by Jenkins */
-        String url = jsonObject.getJSONObject("repository").getString("url");
+        // JSONObject repo = jsonObject.getJSONObject("repository");
+        // if (repo!=null) {
+        //   url = repo.getString("url");
+        // }
 
         if ( gSecret!=null && !gSecret.isEmpty() ) {
           /* Gogs secret is set */
