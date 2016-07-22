@@ -73,9 +73,9 @@
   </pluginRepositories>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/${project.artifctId}-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    <connection>scm:git:git://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:jenkinsci/gogs-webhook-plugin.git</developerConnection>
+    <url>http://github.com/jenkinsci/gogs-webhook-plugin</url>
     <tag>HEAD</tag>
   </scm>
 </project>
