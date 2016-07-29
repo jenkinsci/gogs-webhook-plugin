@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>gogs-webhook</artifactId>
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.1</version>
   <packaging>hpi</packaging>
 
   <properties>
@@ -76,6 +76,6 @@
     <connection>scm:git:ssh://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com:jenkinsci/gogs-webhook-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
-    <tag>HEAD</tag>
+    <tag>gogs-webhook-1.0.1</tag>
   </scm>
 </project>
