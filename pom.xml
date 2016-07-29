@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>gogs-webhook</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <properties>
@@ -20,7 +20,7 @@
 
   <name>Jenkins Gogs plugin</name>
   <description>Adds Gogs integration to Jenkins</description>
-  <url>https://github.com/jenkinsci/gogs-webhook-plugin.git</url>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin</url>
 
   <licenses>
     <license>
@@ -75,7 +75,7 @@
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/gogs-webhook-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/gogs-webhook-plugin</url>
+    <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
     <tag>HEAD</tag>
   </scm>
 </project>
