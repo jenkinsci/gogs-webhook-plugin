@@ -73,8 +73,8 @@
   </pluginRepositories>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/gogs-webhook-plugin.git</developerConnection>
+    <connection>scm:git:ssh://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com:jenkinsci/gogs-webhook-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
     <tag>HEAD</tag>
   </scm>
