@@ -23,57 +23,84 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import java.util.logging.Level;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
-import net.sf.json.JSONObject;
-import hudson.model.Job;
-import hudson.model.Cause;
+import hudson.model.*;
+import jenkins.model.ParameterizedJobMixIn;
 import hudson.security.ACL;
-import hudson.model.AbstractProject;
 import jenkins.model.Jenkins;
 
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 
+import javax.servlet.ServletException;
+
 public class GogsPayloadProcessor {
-  private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
 
-  public GogsPayloadProcessor() {
-  }
-
-  public GogsResults triggerJobs(String jobName, String deliveryID) {
-    SecurityContext saveCtx = null;
-    Boolean didJob = false;
-    GogsResults result = new GogsResults();
-
-    try {
-      saveCtx = SecurityContextHolder.getContext();
-
-      Jenkins instance = Jenkins.getInstance();
-      if (instance!=null) {
-        ACL acl = instance.getACL();
-        acl.impersonate(ACL.SYSTEM);
-        for (AbstractProject<?,?> project : instance.getAllItems(AbstractProject.class)) {
-          if ( project.getName().equals(jobName) ) {
-
-            Cause cause = new GogsCause(deliveryID);
-            project.scheduleBuild(0, cause);
-            didJob = true;
-            result.setMessage(String.format("Job '%s' is executed",jobName));
-          }
-        }
-        if (!didJob) {
-          String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
-          result.setStatus(404, msg);
-          LOGGER.warning(msg);
-        }
-      }
-    } catch (Exception e) {
-    } finally {
-        SecurityContextHolder.setContext(saveCtx);
+    public GogsPayloadProcessor() {
     }
 
-    return result;
-  }
+    public GogsResults triggerJobs(String jobName, String deliveryID) {
+        SecurityContext saveCtx = null;
+        Boolean didJob = false;
+        GogsResults result = new GogsResults();
+
+        try {
+            saveCtx = SecurityContextHolder.getContext();
+
+            Jenkins instance = Jenkins.getInstance();
+            if (instance != null) {
+                ACL acl = instance.getACL();
+                acl.impersonate(ACL.SYSTEM);
+
+                for (Job<?, ?> project : instance.getAllItems(Job.class)) {
+                    if (project.getName().equals(jobName)) {
+
+                        scheduleNow(project, deliveryID);
+                        didJob = true;
+                        result.setMessage(String.format("Job '%s' is executed", jobName));
+                    }
+                }
+                if (!didJob) {
+                    String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                    result.setStatus(404, msg);
+                    LOGGER.warning(msg);
+                }
+            }
+        } catch (Exception e) {
+        } finally {
+            SecurityContextHolder.setContext(saveCtx);
+        }
+
+        return result;
+    }
+
+    private void scheduleNow(final Job project, String deliveryId) throws ServletException {
+        project.checkPermission(AbstractProject.BUILD);
+
+        List<Action> actionsList = new ArrayList<>();
+        actionsList.add(new CauseAction(new GogsCause(deliveryId)));
+        Action[] actions = actionsList.toArray(new Action[actionsList.size()]);
+
+        if (project instanceof AbstractProject) {
+            Jenkins.getInstance().getQueue()
+                    .schedule((AbstractProject) project, 0,
+                            actions);
+        } else {
+            getParameterizedJobMixIn(project)
+                    .scheduleBuild2(0, actions);
+        }
+    }
+
+    private ParameterizedJobMixIn getParameterizedJobMixIn(final Job project) {
+        return new ParameterizedJobMixIn() {
+            @Override
+            protected Job asJob() {
+                return project;
+            }
+        };
+    }
 }
