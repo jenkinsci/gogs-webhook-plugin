@@ -23,14 +23,11 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import net.sf.json.JSONObject;
-import hudson.model.Job;
+import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.security.ACL;
-import hudson.model.AbstractProject;
 import jenkins.model.Jenkins;
 
 import org.acegisecurity.context.SecurityContext;
@@ -54,7 +51,7 @@ public class GogsPayloadProcessor {
       if (instance!=null) {
         ACL acl = instance.getACL();
         acl.impersonate(ACL.SYSTEM);
-        for (AbstractProject<?,?> project : instance.getAllItems(AbstractProject.class)) {
+        for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
           if ( project.getName().equals(jobName) ) {
 
             Cause cause = new GogsCause(deliveryID);
