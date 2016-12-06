@@ -24,32 +24,20 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package org.jenkinsci.plugins.gogs;
 
 import hudson.Extension;
-import hudson.tasks.Builder;
-import hudson.model.Descriptor;
+import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
-
-import java.util.Map;
-import java.util.List;
-import java.util.LinkedList;
-import java.util.LinkedHashMap;
-
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.io.UnsupportedEncodingException;
-import javax.inject.Inject;
-import javax.servlet.ServletException;
-
-import net.sf.json.JSONObject;
-
 import jenkins.model.Jenkins;
-
+import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
-import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * @author Alexander Verhaar
@@ -58,6 +46,7 @@ import org.kohsuke.stapler.StaplerResponse;
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
     public static final String URLNAME = "gogs-webhook";
+    private static final String DEFAULT_CHARSET = "UTF-8";
     private Jenkins jenkins = Jenkins.getInstance();
     private StaplerResponse resp;
 
@@ -79,10 +68,9 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @param req request
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
-      String url = null;
       GogsResults result = new GogsResults();
       GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
-      GogsProjectProperty.DescriptorImpl projectProperty = jenkins.getDescriptorByType(GogsProjectProperty.DescriptorImpl.class);
+
       this.resp = rsp;
 
       // Get X-Gogs-Event
@@ -109,11 +97,11 @@ public class GogsWebHook implements UnprotectedRootAction {
       }
 
       // Get the POST stream
-      String body = IOUtils.toString(req.getInputStream());
+      String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
       if ( !body.isEmpty()  && req.getRequestURI().contains("/" + URLNAME + "/") ) {
         String contentType = req.getContentType();
         if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
-          body = URLDecoder.decode(body);
+          body = URLDecoder.decode(body, DEFAULT_CHARSET);
         }
         if (body.startsWith("payload=")) {
           body = body.substring(8);
@@ -121,29 +109,36 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         JSONObject jsonObject = JSONObject.fromObject(body);
         String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
-        String jSecret = projectProperty.getGogsSecret(); /* Secret provided by Jenkins */
-        // JSONObject repo = jsonObject.getJSONObject("repository");
-        // if (repo!=null) {
-        //   url = repo.getString("url");
-        // }
 
-        if ( gSecret!=null && !gSecret.isEmpty() ) {
-          /* Gogs secret is set */
-          if ( jSecret!=null && !jSecret.isEmpty()) {
-            /* Jenkins secret is set */
-            if  ( !jSecret.equals(gSecret) ) {
-              /* Gogs and Jenkins secrets differs */
-              result.setStatus(403, "Incorrect secret");
-            } else {
-              /* Password is set in Jenkins and Gogs, and is correct */
-              result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        String jSecret = null;
+        /* secret is stored in the properties of Job */
+        boolean foundJob = false;
+        for (Job job : jenkins.getAllItems(Job.class)) {
+          foundJob = job.getName().equals(jobName);
+          if (foundJob) {
+            final GogsProjectProperty property = (GogsProjectProperty) job
+                    .getProperty(GogsProjectProperty.class);
+            if (property != null) { /* only if Gogs secret is defined on the job */
+              jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
             }
-          } else {
-            result.setStatus(403, "Incorrect secret");
+            /* no need to go through all other jobs */
+            break;
           }
-        } else {
-          /* No password is set in Jenkins or Gogs, run without secrets */
+        }
+
+        if (!foundJob) {
+          String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+          result.setStatus(404, msg);
+          LOGGER.warning(msg);
+        } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
+          /* No password is set in Jenkins and Gogs, run without secrets */
           result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
+          /* Password is set in Jenkins and Gogs, and is correct */
+          result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        } else {
+          /* Gogs and Jenkins secrets differs */
+          result.setStatus(403, "Incorrect secret");
         }
       } else {
         result.setStatus(404, "No payload or URI contains invalid entries.");
@@ -155,7 +150,7 @@ public class GogsWebHook implements UnprotectedRootAction {
     /**
      * Exit the WebHook
      *
-     * @param results GogsResults
+     * @param result GogsResults
      */
     private void exitWebHook(GogsResults result)  throws IOException {
       if ( result.getStatus() != 200 ) {
@@ -180,11 +175,15 @@ public class GogsWebHook implements UnprotectedRootAction {
       final String[] pairs = qs.split("&");
       for (String pair : pairs) {
         final int idx = pair.indexOf("=");
-        final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
-        final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), "UTF-8") : null;
+        final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), DEFAULT_CHARSET) : pair;
+        final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), DEFAULT_CHARSET) : null;
         query_pairs.put(key,value);
       }
       return query_pairs;
+    }
+
+    private boolean isNullOrEmpty(String s) {
+      return s == null || s.trim().isEmpty();
     }
 }
 
