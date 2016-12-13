@@ -26,8 +26,11 @@ package org.jenkinsci.plugins.gogs;
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
+import hudson.security.ACL;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -113,17 +116,26 @@ public class GogsWebHook implements UnprotectedRootAction {
         String jSecret = null;
         /* secret is stored in the properties of Job */
         boolean foundJob = false;
-        for (Job job : jenkins.getAllItems(Job.class)) {
-          foundJob = job.getName().equals(jobName);
-          if (foundJob) {
-            final GogsProjectProperty property = (GogsProjectProperty) job
-                    .getProperty(GogsProjectProperty.class);
-            if (property != null) { /* only if Gogs secret is defined on the job */
-              jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+
+        SecurityContext saveCtx = SecurityContextHolder.getContext();
+
+        try {
+            ACL acl = jenkins.getACL();
+            acl.impersonate(ACL.SYSTEM);
+
+            for (Job job : jenkins.getAllItems(Job.class)) {
+                foundJob = job.getName().equals(jobName);
+                if (foundJob) {
+                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                    if (property != null) { /* only if Gogs secret is defined on the job */
+                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                    }
+                    /* no need to go through all other jobs */
+                    break;
+                }
             }
-            /* no need to go through all other jobs */
-            break;
-          }
+        } finally {
+            SecurityContextHolder.setContext(saveCtx);
         }
 
         if (!foundJob) {
