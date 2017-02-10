@@ -70,93 +70,94 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param req request
      */
-    public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
-      GogsResults result = new GogsResults();
-      GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+    public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        GogsResults result = new GogsResults();
+        GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
 
-      this.resp = rsp;
+        this.resp = rsp;
 
-      // Get X-Gogs-Event
-      String event = req.getHeader("X-Gogs-Event");
-      if (!"push".equals(event)) {
-        result.setStatus(403, "Only push event can be accepted.");
-        exitWebHook(result);
-      }
-
-      // Get X-Gogs-Delivery header with deliveryID
-      String gogsDelivery = req.getHeader("X-Gogs-Delivery");
-      if ( gogsDelivery==null || gogsDelivery.isEmpty() ) {
-        gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
-      } else {
-        gogsDelivery = "Gogs-ID: " + gogsDelivery;
-      }
-
-      // Get querystring from the URI
-      Map querystring = splitQuery(req.getQueryString());
-      String jobName = querystring.get("job").toString();
-      if ( jobName!=null && jobName.isEmpty() ) {
-        result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
-        exitWebHook(result);
-      }
-
-      // Get the POST stream
-      String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
-      if ( !body.isEmpty()  && req.getRequestURI().contains("/" + URLNAME + "/") ) {
-        String contentType = req.getContentType();
-        if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
-          body = URLDecoder.decode(body, DEFAULT_CHARSET);
-        }
-        if (body.startsWith("payload=")) {
-          body = body.substring(8);
+        // Get X-Gogs-Event
+        String event = req.getHeader("X-Gogs-Event");
+        if (!"push".equals(event)) {
+            result.setStatus(403, "Only push event can be accepted.");
+            exitWebHook(result);
         }
 
-        JSONObject jsonObject = JSONObject.fromObject(body);
-        String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
-
-        String jSecret = null;
-        /* secret is stored in the properties of Job */
-        boolean foundJob = false;
-
-        SecurityContext saveCtx = SecurityContextHolder.getContext();
-
-        try {
-            ACL acl = jenkins.getACL();
-            acl.impersonate(ACL.SYSTEM);
-
-            for (Job job : jenkins.getAllItems(Job.class)) {
-                foundJob = job.getName().equals(jobName);
-                if (foundJob) {
-                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                    if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                    }
-                    /* no need to go through all other jobs */
-                    break;
-                }
-            }
-        } finally {
-            SecurityContextHolder.setContext(saveCtx);
-        }
-
-        if (!foundJob) {
-          String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
-          result.setStatus(404, msg);
-          LOGGER.warning(msg);
-        } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
-          /* No password is set in Jenkins and Gogs, run without secrets */
-          result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
-        } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
-          /* Password is set in Jenkins and Gogs, and is correct */
-          result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+        // Get X-Gogs-Delivery header with deliveryID
+        String gogsDelivery = req.getHeader("X-Gogs-Delivery");
+        if (gogsDelivery == null || gogsDelivery.isEmpty()) {
+            gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
         } else {
-          /* Gogs and Jenkins secrets differs */
-          result.setStatus(403, "Incorrect secret");
+            gogsDelivery = "Gogs-ID: " + gogsDelivery;
         }
-      } else {
-        result.setStatus(404, "No payload or URI contains invalid entries.");
-      }
 
-      exitWebHook(result);
+        // Get querystring from the URI
+        Map querystring = splitQuery(req.getQueryString());
+        String jobName = querystring.get("job").toString();
+        if (jobName != null && jobName.isEmpty()) {
+            result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
+            exitWebHook(result);
+        }
+
+        // Get the POST stream
+        String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
+        if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
+            String contentType = req.getContentType();
+            if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
+                body = URLDecoder.decode(body, DEFAULT_CHARSET);
+            }
+            if (body.startsWith("payload=")) {
+                body = body.substring(8);
+            }
+
+            JSONObject jsonObject = JSONObject.fromObject(body);
+            String gSecret = jsonObject.getString("secret");            /* Secret provided by Gogs    */
+            payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
+            payloadProcessor.setPayload("before",jsonObject.getString("before"));
+
+            String jSecret = null;                                      /* secret is stored in the properties of Job */
+            boolean foundJob = false;
+
+            SecurityContext saveCtx = SecurityContextHolder.getContext();
+
+            try {
+                ACL acl = jenkins.getACL();
+                acl.impersonate(ACL.SYSTEM);
+
+                for (Job job : jenkins.getAllItems(Job.class)) {
+                    foundJob = job.getName().equals(jobName);
+                    if (foundJob) {
+                        final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                        if (property != null) {                         /* only if Gogs secret is defined on the job */
+                            jSecret = property.getGogsSecret();         /* Secret provided by Jenkins */
+                        }
+                        /* no need to go through all other jobs */
+                        break;
+                    }
+                }
+            } finally {
+                SecurityContextHolder.setContext(saveCtx);
+            }
+
+            if (!foundJob) {
+                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                result.setStatus(404, msg);
+                LOGGER.warning(msg);
+            } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
+                /* No password is set in Jenkins and Gogs, run without secrets */
+                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+            } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
+                /* Password is set in Jenkins and Gogs, and is correct */
+                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+            } else {
+                /* Gogs and Jenkins secrets differs */
+                result.setStatus(403, "Incorrect secret");
+            }
+        } else {
+            result.setStatus(404, "No payload or URI contains invalid entries.");
+        }
+
+        exitWebHook(result);
     }
 
     /**
@@ -164,16 +165,16 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param result GogsResults
      */
-    private void exitWebHook(GogsResults result)  throws IOException {
-      if ( result.getStatus() != 200 ) {
-        LOGGER.warning(result.getMessage());
-      }
-      JSONObject json = new JSONObject();
-      json.put("result", result.getStatus()==200 ? "OK" : "ERROR");
-      json.put("message", result.getMessage());
-      resp.setStatus(result.getStatus());
-      resp.addHeader("Content-Type","application/json");
-      resp.getWriter().print(json.toString());
+    private void exitWebHook(GogsResults result) throws IOException {
+        if (result.getStatus() != 200) {
+            LOGGER.warning(result.getMessage());
+        }
+        JSONObject json = new JSONObject();
+        json.put("result", result.getStatus() == 200 ? "OK" : "ERROR");
+        json.put("message", result.getMessage());
+        resp.setStatus(result.getStatus());
+        resp.addHeader("Content-Type", "application/json");
+        resp.getWriter().print(json.toString());
     }
 
     /**
@@ -183,19 +184,19 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @return returns map from querystring
      */
     private static Map<String, String> splitQuery(String qs) throws UnsupportedEncodingException {
-      final Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-      final String[] pairs = qs.split("&");
-      for (String pair : pairs) {
-        final int idx = pair.indexOf("=");
-        final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), DEFAULT_CHARSET) : pair;
-        final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), DEFAULT_CHARSET) : null;
-        query_pairs.put(key,value);
-      }
-      return query_pairs;
+        final Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+        final String[] pairs = qs.split("&");
+        for (String pair : pairs) {
+            final int idx = pair.indexOf("=");
+            final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), DEFAULT_CHARSET) : pair;
+            final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), DEFAULT_CHARSET) : null;
+            query_pairs.put(key, value);
+        }
+        return query_pairs;
     }
 
     private boolean isNullOrEmpty(String s) {
-      return s == null || s.trim().isEmpty();
+        return s == null || s.trim().isEmpty();
     }
 }
 

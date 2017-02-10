@@ -23,54 +23,90 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
+import hudson.scm.SCM;
 import hudson.security.ACL;
+import hudson.triggers.Trigger;
 import jenkins.model.Jenkins;
 
+import jenkins.model.ParameterizedJobMixIn;
+import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 
 public class GogsPayloadProcessor {
-  private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
+    private Map<String, String> payload = new HashMap<String, String>();
 
-  public GogsPayloadProcessor() {
-  }
-
-  public GogsResults triggerJobs(String jobName, String deliveryID) {
-    SecurityContext saveCtx = null;
-    Boolean didJob = false;
-    GogsResults result = new GogsResults();
-
-    try {
-      saveCtx = SecurityContextHolder.getContext();
-
-      Jenkins instance = Jenkins.getInstance();
-      if (instance!=null) {
-        ACL acl = instance.getACL();
-        acl.impersonate(ACL.SYSTEM);
-        for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
-          if ( project.getName().equals(jobName) ) {
-
-            Cause cause = new GogsCause(deliveryID);
-            project.scheduleBuild(0, cause);
-            didJob = true;
-            result.setMessage(String.format("Job '%s' is executed",jobName));
-          }
-        }
-        if (!didJob) {
-          String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
-          result.setStatus(404, msg);
-          LOGGER.warning(msg);
-        }
-      }
-    } catch (Exception e) {
-    } finally {
-        SecurityContextHolder.setContext(saveCtx);
+    public GogsPayloadProcessor() {
     }
 
-    return result;
-  }
+    public Map<String, String> getPayload() {
+        return this.payload;
+    }
+
+    public void setPayload(String k, String v) {
+        this.payload.put(k, v);
+    }
+
+    public GogsResults triggerJobs(String jobName, String deliveryID) {
+        SecurityContext saveCtx = null;
+        Boolean didJob = false;
+        GogsResults result = new GogsResults();
+
+        try {
+            saveCtx = SecurityContextHolder.getContext();
+
+            Jenkins instance = Jenkins.getInstance();
+            if (instance != null) {
+                ACL acl = instance.getACL();
+                acl.impersonate(ACL.SYSTEM);
+                for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
+                    if (project.getName().equals(jobName)) {
+
+                        GogsTrigger gTrigger = null;
+                        Cause cause = new GogsCause(deliveryID);
+
+                        if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
+                            ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
+                            for (Trigger trigger : pJob.getTriggers().values()) {
+                                if (trigger instanceof GogsTrigger) {
+                                    gTrigger = (GogsTrigger) trigger;
+                                    break;
+                                }
+                            }
+                        }
+                        if (gTrigger != null) {
+                            SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                            GogsPayload gogsPayload = new GogsPayload(this.payload);
+
+                            item.scheduleBuild2(0, gogsPayload);
+                        } else
+                            project.scheduleBuild(0, cause);
+
+                        didJob = true;
+                        result.setMessage(String.format("Job '%s' is executed", jobName));
+                    }
+                }
+                if (!didJob) {
+                    String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                    result.setStatus(404, msg);
+                    LOGGER.warning(msg);
+                }
+            }
+        } catch (Exception e) {
+        } finally {
+            SecurityContextHolder.setContext(saveCtx);
+        }
+
+        return result;
+    }
 }

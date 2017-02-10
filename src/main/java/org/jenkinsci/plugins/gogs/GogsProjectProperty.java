@@ -23,7 +23,6 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import org.jenkinsci.plugins.gogs.GogsWebHook;
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.JobProperty;
@@ -37,45 +36,56 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.util.logging.Logger;
 
 public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
-  private final String gogsSecret;
+    private final String gogsSecret;
+    private final boolean gogsUsePayload;
 
-  @DataBoundConstructor
-  public GogsProjectProperty(String gogsSecret) {
-    this.gogsSecret = gogsSecret;
-  }
+    @DataBoundConstructor
+    public GogsProjectProperty(String gogsSecret, boolean gogsUsePayload) {
+        this.gogsSecret = gogsSecret;
+        this.gogsUsePayload = gogsUsePayload;
+    }
 
-  public String getGogsSecret() {
-    return this.gogsSecret;
-  }
+    public String getGogsSecret() {
+        return this.gogsSecret;
+    }
 
-  private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
+    public boolean getGogsUsePayload() {
+        return this.gogsUsePayload;
+    }
 
-  @Extension
-  public static final class DescriptorImpl extends JobPropertyDescriptor {
-      public static final String GOGS_PROJECT_BLOCK_NAME = "gogsProject";
-      private String gogsSecret;
+    private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
 
-      public String getGogsSecret() {
-        return gogsSecret;
-      }
+    @Extension
+    public static final class DescriptorImpl extends JobPropertyDescriptor {
+        public static final String GOGS_PROJECT_BLOCK_NAME = "gogsProject";
+        private String gogsSecret;
+        private boolean gogsUsePayload;
 
-      public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-        GogsProjectProperty tpp = req.bindJSON(
-                GogsProjectProperty.class,
-                formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
-        );
-        if ( tpp != null ) {
-          LOGGER.info(formData.toString());
-          LOGGER.info(tpp.gogsSecret);
-
-          gogsSecret = tpp.gogsSecret;
+        public String getGogsSecret() {
+            return gogsSecret;
         }
-        return tpp;
-      }
 
-      @Override
-      public String getDisplayName() {
-          return "Gogs Secret";
-      }
-  }
+        public boolean getGogsUsePayload() {
+            return gogsUsePayload;
+        }
+
+        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            GogsProjectProperty tpp = req.bindJSON(
+                    GogsProjectProperty.class,
+                    formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
+            );
+            if (tpp != null) {
+                LOGGER.info(formData.toString());
+                LOGGER.info(tpp.gogsSecret);
+
+                gogsSecret = tpp.gogsSecret;
+            }
+            return tpp;
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "Gogs Secret";
+        }
+    }
 }
