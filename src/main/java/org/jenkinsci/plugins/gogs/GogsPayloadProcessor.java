@@ -88,7 +88,8 @@ public class GogsPayloadProcessor {
                             SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
                             GogsPayload gogsPayload = new GogsPayload(this.payload);
 
-                            item.scheduleBuild2(0, gogsPayload);
+                            if (item != null)
+                                item.scheduleBuild2(0, gogsPayload);
                         } else
                             project.scheduleBuild(0, cause);
 
