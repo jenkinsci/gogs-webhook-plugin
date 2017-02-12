@@ -23,6 +23,8 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -103,7 +105,13 @@ public class GogsPayloadProcessor {
                     LOGGER.warning(msg);
                 }
             }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            LOGGER.severe(sw.toString());
         } finally {
             SecurityContextHolder.setContext(saveCtx);
         }
