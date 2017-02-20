@@ -69,6 +69,8 @@ public class GogsWebHook implements UnprotectedRootAction {
      * Receives the HTTP POST request send by Gogs.
      *
      * @param req request
+     * @param rsp response
+     * @throws IOException problem while parsing
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
       GogsResults result = new GogsResults();
