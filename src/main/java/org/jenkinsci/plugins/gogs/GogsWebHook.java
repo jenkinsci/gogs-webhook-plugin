@@ -48,10 +48,8 @@ import java.util.logging.Logger;
 @Extension
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
-    public static final String URLNAME = "gogs-webhook";
+    static final String URLNAME = "gogs-webhook";
     private static final String DEFAULT_CHARSET = "UTF-8";
-    private Jenkins jenkins = Jenkins.getInstance();
-    private StaplerResponse resp;
 
     public String getDisplayName() {
         return null;
@@ -76,13 +74,11 @@ public class GogsWebHook implements UnprotectedRootAction {
       GogsResults result = new GogsResults();
       GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
 
-      this.resp = rsp;
-
       // Get X-Gogs-Event
       String event = req.getHeader("X-Gogs-Event");
       if (!"push".equals(event)) {
         result.setStatus(403, "Only push event can be accepted.");
-        exitWebHook(result);
+        exitWebHook(result, rsp);
       }
 
       // Get X-Gogs-Delivery header with deliveryID
@@ -98,7 +94,7 @@ public class GogsWebHook implements UnprotectedRootAction {
       String jobName = querystring.get("job").toString();
       if ( jobName!=null && jobName.isEmpty() ) {
         result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
-        exitWebHook(result);
+        exitWebHook(result, rsp);
       }
 
       // Get the POST stream
@@ -121,6 +117,7 @@ public class GogsWebHook implements UnprotectedRootAction {
         SecurityContext saveCtx = SecurityContextHolder.getContext();
 
         try {
+            Jenkins jenkins = Jenkins.getActiveInstance();
             ACL acl = jenkins.getACL();
             acl.impersonate(ACL.SYSTEM);
 
@@ -156,7 +153,7 @@ public class GogsWebHook implements UnprotectedRootAction {
         result.setStatus(404, "No payload or URI contains invalid entries.");
       }
 
-      exitWebHook(result);
+      exitWebHook(result, rsp);
     }
 
     /**
@@ -164,7 +161,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param result GogsResults
      */
-    private void exitWebHook(GogsResults result)  throws IOException {
+    private void exitWebHook(GogsResults result, StaplerResponse resp)  throws IOException {
       if ( result.getStatus() != 200 ) {
         LOGGER.warning(result.getMessage());
       }

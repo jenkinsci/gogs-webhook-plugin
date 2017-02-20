@@ -45,7 +45,7 @@ public class GogsPayloadProcessor {
     try {
       saveCtx = SecurityContextHolder.getContext();
 
-      Jenkins instance = Jenkins.getInstance();
+      Jenkins instance = Jenkins.getActiveInstance();
       if (instance!=null) {
         ACL acl = instance.getACL();
         acl.impersonate(ACL.SYSTEM);

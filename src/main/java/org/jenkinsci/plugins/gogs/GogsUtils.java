@@ -14,7 +14,7 @@ class GogsUtils {
 	 * @return the Job matching the given name, or {@code null} when not found
 	 */
 	static <T extends Item> T find(String jobName, Class<T> type) {
-		Jenkins jenkins = Jenkins.getInstance();
+		Jenkins jenkins = Jenkins.getActiveInstance();
 		// direct search, can be used to find folder based items <folder>/<folder>/<jobName>
 		T item = jenkins.getItemByFullName(jobName, type);
 		if (item == null) {
