@@ -114,7 +114,6 @@ public class GogsWebHook implements UnprotectedRootAction {
         String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
 
         String jSecret = null;
-        /* secret is stored in the properties of Job */
         boolean foundJob = false;
 
         SecurityContext saveCtx = SecurityContextHolder.getContext();
@@ -123,16 +122,15 @@ public class GogsWebHook implements UnprotectedRootAction {
             ACL acl = jenkins.getACL();
             acl.impersonate(ACL.SYSTEM);
 
-            for (Job job : jenkins.getAllItems(Job.class)) {
-                foundJob = job.getName().equals(jobName);
-                if (foundJob) {
-                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                    if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                    }
-                    /* no need to go through all other jobs */
-                    break;
-                }
+            Job job = GogsUtils.find(jobName, Job.class);
+
+            if (job != null) {
+                foundJob = true;
+				/* secret is stored in the properties of Job */
+				final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+				if (property != null) { /* only if Gogs secret is defined on the job */
+					jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+				}
             }
         } finally {
             SecurityContextHolder.setContext(saveCtx);

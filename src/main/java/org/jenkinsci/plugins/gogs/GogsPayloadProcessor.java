@@ -23,15 +23,14 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import java.util.logging.Logger;
-
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
-
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
+
+import java.util.logging.Logger;
 
 public class GogsPayloadProcessor {
   private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
@@ -41,7 +40,6 @@ public class GogsPayloadProcessor {
 
   public GogsResults triggerJobs(String jobName, String deliveryID) {
     SecurityContext saveCtx = null;
-    Boolean didJob = false;
     GogsResults result = new GogsResults();
 
     try {
@@ -51,16 +49,13 @@ public class GogsPayloadProcessor {
       if (instance!=null) {
         ACL acl = instance.getACL();
         acl.impersonate(ACL.SYSTEM);
-        for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
-          if ( project.getName().equals(jobName) ) {
 
-            Cause cause = new GogsCause(deliveryID);
-            project.scheduleBuild(0, cause);
-            didJob = true;
-            result.setMessage(String.format("Job '%s' is executed",jobName));
-          }
-        }
-        if (!didJob) {
+        BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
+        if (project != null) {
+          Cause cause = new GogsCause(deliveryID);
+          project.scheduleBuild(0, cause);
+          result.setMessage(String.format("Job '%s' is executed",jobName));
+        } else {
           String msg = String.format("Job '%s' is not defined in Jenkins",jobName);
           result.setStatus(404, msg);
           LOGGER.warning(msg);
