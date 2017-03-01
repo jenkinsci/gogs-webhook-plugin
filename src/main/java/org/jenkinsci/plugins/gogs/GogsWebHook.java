@@ -110,8 +110,12 @@ public class GogsWebHook implements UnprotectedRootAction {
           body = body.substring(8);
         }
 
-        JSONObject jsonObject = JSONObject.fromObject(body);
-        String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
+        // Secret provided by Gogs
+        String gSecret = req.getHeader("X-Gogs-Signature");
+        if ( gSecret==null || gSecret.isEmpty() ) {
+          JSONObject jsonObject = JSONObject.fromObject(body);
+          gSecret = jsonObject.getString("secret");
+        }
 
         String jSecret = null;
         /* secret is stored in the properties of Job */
