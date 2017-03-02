@@ -48,10 +48,8 @@ import java.util.logging.Logger;
 @Extension
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
-    public static final String URLNAME = "gogs-webhook";
+    static final String URLNAME = "gogs-webhook";
     private static final String DEFAULT_CHARSET = "UTF-8";
-    private Jenkins jenkins = Jenkins.getInstance();
-    private StaplerResponse resp;
 
     public String getDisplayName() {
         return null;
@@ -69,18 +67,18 @@ public class GogsWebHook implements UnprotectedRootAction {
      * Receives the HTTP POST request send by Gogs.
      *
      * @param req request
+     * @param rsp response
+     * @throws IOException problem while parsing
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp)  throws IOException {
       GogsResults result = new GogsResults();
       GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
 
-      this.resp = rsp;
-
       // Get X-Gogs-Event
       String event = req.getHeader("X-Gogs-Event");
       if (!"push".equals(event)) {
         result.setStatus(403, "Only push event can be accepted.");
-        exitWebHook(result);
+        exitWebHook(result, rsp);
       }
 
       // Get X-Gogs-Delivery header with deliveryID
@@ -96,7 +94,7 @@ public class GogsWebHook implements UnprotectedRootAction {
       String jobName = querystring.get("job").toString();
       if ( jobName!=null && jobName.isEmpty() ) {
         result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
-        exitWebHook(result);
+        exitWebHook(result, rsp);
       }
 
       // Get the POST stream
@@ -114,25 +112,24 @@ public class GogsWebHook implements UnprotectedRootAction {
         String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
 
         String jSecret = null;
-        /* secret is stored in the properties of Job */
         boolean foundJob = false;
 
         SecurityContext saveCtx = SecurityContextHolder.getContext();
 
         try {
+            Jenkins jenkins = Jenkins.getActiveInstance();
             ACL acl = jenkins.getACL();
             acl.impersonate(ACL.SYSTEM);
 
-            for (Job job : jenkins.getAllItems(Job.class)) {
-                foundJob = job.getName().equals(jobName);
-                if (foundJob) {
-                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                    if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                    }
-                    /* no need to go through all other jobs */
-                    break;
-                }
+            Job job = GogsUtils.find(jobName, Job.class);
+
+            if (job != null) {
+                foundJob = true;
+				/* secret is stored in the properties of Job */
+				final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+				if (property != null) { /* only if Gogs secret is defined on the job */
+					jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+				}
             }
         } finally {
             SecurityContextHolder.setContext(saveCtx);
@@ -156,7 +153,7 @@ public class GogsWebHook implements UnprotectedRootAction {
         result.setStatus(404, "No payload or URI contains invalid entries.");
       }
 
-      exitWebHook(result);
+      exitWebHook(result, rsp);
     }
 
     /**
@@ -164,7 +161,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param result GogsResults
      */
-    private void exitWebHook(GogsResults result)  throws IOException {
+    private void exitWebHook(GogsResults result, StaplerResponse resp)  throws IOException {
       if ( result.getStatus() != 200 ) {
         LOGGER.warning(result.getMessage());
       }
