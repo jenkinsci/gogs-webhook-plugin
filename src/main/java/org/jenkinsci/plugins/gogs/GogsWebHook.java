@@ -44,7 +44,6 @@ import java.util.logging.Logger;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.Charset;
-// import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
 /**
@@ -70,6 +69,12 @@ public class GogsWebHook implements UnprotectedRootAction {
         return URLNAME;
     }
 
+    /**
+     * encode sha256 hmac
+     *
+     * @param data data to hex
+     * @param key key of HmacSHA256
+     */
     public static String encode(String data, String key) throws Exception {
         final Charset asciiCs = Charset.forName("UTF-8");
         final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
@@ -162,9 +167,6 @@ public class GogsWebHook implements UnprotectedRootAction {
         }
         else{
           try{
-            // LOGGER.warning(jSecret);
-            // LOGGER.warning(gogsSignature);
-            // LOGGER.warning(encode(body,jSecret));
             if(gogsSignature.equals(encode(body,jSecret))){
               gSecret = jSecret;
               // now hex is right, continue to old logic
