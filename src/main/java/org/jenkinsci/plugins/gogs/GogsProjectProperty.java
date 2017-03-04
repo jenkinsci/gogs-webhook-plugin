@@ -60,6 +60,9 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
       }
 
       public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        if(req == null){
+          return null;
+        }
         GogsProjectProperty tpp = req.bindJSON(
                 GogsProjectProperty.class,
                 formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
