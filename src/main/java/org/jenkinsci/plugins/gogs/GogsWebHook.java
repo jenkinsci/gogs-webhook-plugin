@@ -41,6 +41,11 @@ import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.Charset;
+// import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 
 /**
  * @author Alexander Verhaar
@@ -63,6 +68,14 @@ public class GogsWebHook implements UnprotectedRootAction {
 
     public String getUrlName() {
         return URLNAME;
+    }
+
+    public static String encode(String data, String key) throws Exception {
+        final Charset asciiCs = Charset.forName("UTF-8");
+        final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+        final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
+        sha256_HMAC.init(secret_key);
+        return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
     }
 
     /**
@@ -91,6 +104,12 @@ public class GogsWebHook implements UnprotectedRootAction {
         gogsDelivery = "Gogs-ID: " + gogsDelivery;
       }
 
+      // Get X-Gogs-Signature
+      String gogsSignature = req.getHeader("X-Gogs-Signature");
+      if ( gogsSignature==null || gogsSignature.isEmpty() ) {
+        gogsSignature=null;
+      }
+
       // Get querystring from the URI
       Map querystring = splitQuery(req.getQueryString());
       String jobName = querystring.get("job").toString();
@@ -111,7 +130,6 @@ public class GogsWebHook implements UnprotectedRootAction {
         }
 
         JSONObject jsonObject = JSONObject.fromObject(body);
-        String gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
 
         String jSecret = null;
         /* secret is stored in the properties of Job */
@@ -136,6 +154,25 @@ public class GogsWebHook implements UnprotectedRootAction {
             }
         } finally {
             SecurityContextHolder.setContext(saveCtx);
+        }
+
+        String gSecret = null;
+        if (gogsSignature==null){
+          gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
+        }
+        else{
+          try{
+            // LOGGER.warning(jSecret);
+            // LOGGER.warning(gogsSignature);
+            // LOGGER.warning(encode(body,jSecret));
+            if(gogsSignature.equals(encode(body,jSecret))){
+              gSecret = jSecret;
+              // now hex is right, continue to old logic
+            }
+          }
+          catch(Exception e){
+            LOGGER.warning(e.getMessage());
+          }
         }
 
         if (!foundJob) {
