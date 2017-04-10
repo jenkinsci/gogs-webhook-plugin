@@ -31,20 +31,20 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.Charset;
-import org.apache.commons.codec.binary.Hex;
 
 /**
  * @author Alexander Verhaar
@@ -160,7 +160,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         String gSecret = null;
         if (gogsSignature==null){
-          gSecret = jsonObject.getString("secret");  /* Secret provided by Gogs    */
+          gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
         }
         else{
           try{
