@@ -46,6 +46,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * @author Alexander Verhaar
  */
@@ -93,6 +95,10 @@ public class GogsWebHook implements UnprotectedRootAction {
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
         GogsResults result = new GogsResults();
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+
+        //Check that we have something to process
+        checkNotNull(req, "Null request submitted to doIndex method");
+        checkNotNull(rsp,"Null reply submitted to doIndex method");
 
         // Get X-Gogs-Event
         String event = req.getHeader("X-Gogs-Event");
