@@ -39,6 +39,7 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -69,6 +70,7 @@ public class GogsWebHook implements UnprotectedRootAction {
         return URLNAME;
     }
 
+
     /**
      * encode sha256 hmac
      *
@@ -98,13 +100,14 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         //Check that we have something to process
         checkNotNull(req, "Null request submitted to doIndex method");
-        checkNotNull(rsp,"Null reply submitted to doIndex method");
+        checkNotNull(rsp, "Null reply submitted to doIndex method");
 
         // Get X-Gogs-Event
         String event = req.getHeader("X-Gogs-Event");
         if (!"push".equals(event)) {
             result.setStatus(403, "Only push event can be accepted.");
             exitWebHook(result, rsp);
+            return;
         }
 
         // Get X-Gogs-Delivery header with deliveryID
@@ -215,7 +218,8 @@ public class GogsWebHook implements UnprotectedRootAction {
         json.put("message", result.getMessage());
         resp.setStatus(result.getStatus());
         resp.addHeader("Content-Type", "application/json");
-        resp.getWriter().print(json.toString());
+        PrintWriter printer = resp.getWriter();
+        printer.print(json.toString());
     }
 
     /**
