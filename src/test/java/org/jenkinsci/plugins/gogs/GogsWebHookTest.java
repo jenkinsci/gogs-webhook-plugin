@@ -135,6 +135,72 @@ public class GogsWebHookTest {
     }
 
 
+    @Test
+    public void whenNoJobInQueryStringMustReturnError() throws Exception {
+        //Prepare the SUT
+        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+
+        StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
+        StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
+        when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
+        when(staplerRequest.getQueryString()).thenReturn("foo=bar&blaah=blaah");
+
+        //perform the testÎ
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
+
+        //validate that everything was done as planed
+        verify(staplerResponse).setStatus(404);
+
+        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Parameter 'job' is missing.\"}";
+        isExpectedOutput(uniqueFile, expectedOutput);
+
+        log.info("Test succeeded.");
+    }
+
+    @Test
+    public void whenEmptyJobInQueryStringMustReturnError() throws Exception {
+        //Prepare the SUT
+        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+
+        StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
+        StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
+        when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
+        when(staplerRequest.getQueryString()).thenReturn("job&foo=bar");
+
+        //perform the testÎ
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
+
+        //validate that everything was done as planed
+        verify(staplerResponse).setStatus(404);
+
+        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"No value assigned to parameter 'job'\"}";
+        isExpectedOutput(uniqueFile, expectedOutput);
+
+        log.info("Test succeeded.");
+    }
+
+    @Test
+    public void whenEmptyJob2InQueryStringMustReturnError() throws Exception {
+        //Prepare the SUT
+        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+
+        StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
+        StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
+        when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
+        when(staplerRequest.getQueryString()).thenReturn("job=&foo=bar");
+
+        //perform the testÎ
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
+
+        //validate that everything was done as planed
+        verify(staplerResponse).setStatus(404);
+
+        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"No value assigned to parameter 'job'\"}";
+        isExpectedOutput(uniqueFile, expectedOutput);
+
+        log.info("Test succeeded.");
+    }
+
     //
     // Helper methods
     //
