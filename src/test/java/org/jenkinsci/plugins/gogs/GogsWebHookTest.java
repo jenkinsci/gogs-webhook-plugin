@@ -42,7 +42,7 @@ public class GogsWebHookTest {
     }
 
     @Test
-    public void callDoIndexWithNullReqMessageMustFail() throws IOException {
+    public void callDoIndexWithNullReqMessageMustThrowException() throws IOException {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
         try {
@@ -57,7 +57,7 @@ public class GogsWebHookTest {
     }
 
     @Test
-    public void callDoIndexWithNullResponseMessageMustFail() throws IOException {
+    public void callDoIndexWithNullResponseMessageMustThrowException() throws IOException {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         try {
@@ -75,21 +75,18 @@ public class GogsWebHookTest {
     public void whenEmptyHeaderTypeMustReturnError() throws Exception {
         //Prepare the SUT
         File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
-        String uniqueFileName = uniqueFile.getAbsolutePath();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
 
         //perform the test
-        performDoIndexTest(staplerRequest, staplerResponse,uniqueFileName);
+        performDoIndexTest(staplerRequest, staplerResponse,uniqueFile);
 
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String output = FileUtils.readFileToString(uniqueFile, "utf-8");
-        uniqueFile.delete();
         String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Only push event can be accepted.\"}";
-        assertEquals("Not the expected output file content",expectedOutput,output);
+        isExpectedOutput(uniqueFile,expectedOutput);
 
         log.info("Test succeeded.");
     }
@@ -98,28 +95,53 @@ public class GogsWebHookTest {
     public void whenWrongHeaderTypeMustReturnError() throws Exception {
         //Prepare the SUT
         File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
-        String uniqueFileName = uniqueFile.getAbsolutePath();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
         when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("junk");
 
         //perform the testÎ
-        performDoIndexTest(staplerRequest, staplerResponse, uniqueFileName);
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String output = FileUtils.readFileToString(uniqueFile, "utf-8");
-        uniqueFile.delete();
         String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Only push event can be accepted.\"}";
-        assertEquals("Not the expected output file content",expectedOutput,output);
+        isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
     }
 
-    private void performDoIndexTest(StaplerRequest staplerRequest, StaplerResponse staplerResponse, String fileName) throws IOException {
-        PrintWriter printWriter = new PrintWriter(fileName, "UTF-8");
+
+    @Test
+    public void whenQueryStringIsNullMustThrowException() throws Exception {
+        //Prepare the SUT
+        StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
+        StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
+        when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
+        when(staplerRequest.getQueryString()).thenReturn(null);
+        GogsWebHook gogsWebHook = new GogsWebHook();
+
+
+        try {
+            gogsWebHook.doIndex(staplerRequest, staplerResponse);
+        } catch (NullPointerException e) {
+            String expectedErrMsg = "The queryString in the request is null";
+            assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
+            log.info("call failed as expected.");
+            return;
+        }
+        fail("The call should have failed.");
+    }
+
+
+    //
+    // Helper methods
+    //
+
+
+    private void performDoIndexTest(StaplerRequest staplerRequest, StaplerResponse staplerResponse, File file) throws IOException {
+        PrintWriter printWriter = new PrintWriter(file.getAbsoluteFile(), "UTF-8");
         when(staplerResponse.getWriter()).thenReturn(printWriter);
 
         GogsWebHook gogsWebHook = new GogsWebHook();
@@ -130,5 +152,11 @@ public class GogsWebHookTest {
         //Save the Jason log file so we can check it
         printWriter.flush();
         printWriter.close();
+    }
+
+    private void isExpectedOutput(File uniqueFile, String expectedOutput ) throws IOException {
+        String output = FileUtils.readFileToString(uniqueFile, "utf-8");
+        uniqueFile.delete();
+        assertEquals("Not the expected output file content",expectedOutput,output);
     }
 }

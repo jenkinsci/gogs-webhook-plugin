@@ -124,12 +124,15 @@ public class GogsWebHook implements UnprotectedRootAction {
             gogsSignature = null;
         }
 
-        // Get querystring from the URI
-        Map querystring = splitQuery(req.getQueryString());
-        String jobName = querystring.get("job").toString();
+        // Get queryStringMap from the URI
+        String queryString = checkNotNull(req.getQueryString(),"The queryString in the request is null" );
+        Map queryStringMap = checkNotNull(splitQuery(queryString),"Null queryStringMap");
+        //TODO: what happens if the query can't be split ?
+        String jobName = queryStringMap.get("job").toString();
         if (jobName != null && jobName.isEmpty()) {
             result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
             exitWebHook(result, rsp);
+            return;
         }
 
         // Get the POST stream
