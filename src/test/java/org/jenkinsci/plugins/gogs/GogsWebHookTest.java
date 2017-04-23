@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.gogs;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -16,8 +17,11 @@ import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 
 import static org.junit.Assert.assertEquals;
@@ -85,7 +89,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Only push event can be accepted.\"}";
+        String expectedOutput = "Only push event can be accepted.";
         isExpectedOutput(uniqueFile,expectedOutput);
 
         log.info("Test succeeded.");
@@ -106,7 +110,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Only push event can be accepted.\"}";
+        String expectedOutput = "Only push event can be accepted.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -151,7 +155,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(404);
 
-        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"Parameter 'job' is missing.\"}";
+        String expectedOutput = "Parameter 'job' is missing.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -173,7 +177,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(404);
 
-        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"No value assigned to parameter 'job'\"}";
+        String expectedOutput = "No value assigned to parameter 'job'";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -195,7 +199,34 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(404);
 
-        String expectedOutput = "{\"result\":\"ERROR\",\"message\":\"No value assigned to parameter 'job'\"}";
+        String expectedOutput = "No value assigned to parameter 'job'";
+        isExpectedOutput(uniqueFile, expectedOutput);
+
+        log.info("Test succeeded.");
+    }
+
+    @Test
+    public void whenUriDoesNotContainUrlNameMustReturnError() throws Exception {
+        //Prepare the SUT
+        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+
+        StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
+        StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
+        when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
+        when(staplerRequest.getQueryString()).thenReturn("job=myJob");
+
+
+        MockServletInputStream inputStream = new MockServletInputStream("body");
+        when(staplerRequest.getInputStream()).thenReturn(inputStream);
+        when(staplerRequest.getRequestURI()).thenReturn("/badUri/aaa");
+
+        //perform the testÎ
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
+
+        //validate that everything was done as planed
+        verify(staplerResponse).setStatus(404);
+
+        String expectedOutput = "No payload or URI contains invalid entries.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -223,6 +254,36 @@ public class GogsWebHookTest {
     private void isExpectedOutput(File uniqueFile, String expectedOutput ) throws IOException {
         String output = FileUtils.readFileToString(uniqueFile, "utf-8");
         uniqueFile.delete();
-        assertEquals("Not the expected output file content",expectedOutput,output);
+        String completeExpectedOutput = "{\"result\":\"ERROR\",\"message\":\"" + expectedOutput + "\"}";
+        assertEquals("Not the expected output file content",completeExpectedOutput,output);
+    }
+
+
+    class MockServletInputStream extends ServletInputStream {
+        InputStream inputStream;
+
+        MockServletInputStream(String string) {
+            this.inputStream = IOUtils.toInputStream(string);
+        }
+
+        @Override
+        public int read() throws IOException {
+            return inputStream.read();
+        }
+
+        @Override
+        public boolean isFinished() {
+            return false;
+        }
+
+        @Override
+        public boolean isReady() {
+            return false;
+        }
+
+        @Override
+        public void setReadListener(ReadListener readListener) {
+
+        }
     }
 }
