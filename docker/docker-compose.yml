@@ -8,15 +8,12 @@ services:
       - JENKINS_OPTS=--httpPort=8080
       - JENKINS_SLAVE_AGENT_PORT=50000
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    ports:
+      - "8080:8080"
     volumes:
       - jenkins2-data:/var/jenkins_home
     restart: unless-stopped
 
 volumes:
-
   jenkins2-data:
     driver: local
-
-  jenkins-keys:
-    driver: local
-
