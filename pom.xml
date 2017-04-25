@@ -1,97 +1,178 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <parent>
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>2.11</version>
+    </parent>
     <groupId>org.jenkins-ci.plugins</groupId>
-    <artifactId>plugin</artifactId>
-    <version>2.11</version>
-  </parent>
-  <groupId>org.jenkins-ci.plugins</groupId>
-  <artifactId>gogs-webhook</artifactId>
-  <version>1.0.11-SNAPSHOT</version>
-  <packaging>hpi</packaging>
+    <artifactId>gogs-webhook</artifactId>
+    <version>1.0.11-SNAPSHOT</version>
+    <packaging>hpi</packaging>
 
-  <properties>
-    <jenkins.version>1.625.3</jenkins.version>
-    <java.level>7</java.level>
-    <jenkins-test-harness.version>2.13</jenkins-test-harness.version>
-  </properties>
+    <properties>
+        <jenkins.version>1.625.3</jenkins.version>
+        <java.level>7</java.level>
+        <jenkins-test-harness.version>2.13</jenkins-test-harness.version>
+        <docker.maven.plugin.version>0.20.1</docker.maven.plugin.version>
+    </properties>
 
-  <name>Jenkins Gogs plugin</name>
-  <description>Adds Gogs integration to Jenkins</description>
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin</url>
+    <name>Jenkins Gogs plugin</name>
+    <description>Adds Gogs integration to Jenkins</description>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin</url>
 
-  <licenses>
-    <license>
-      <name>The MIT license</name>
-      <url>http://www.opensource.org/licenses/mit-license.php</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
+    <licenses>
+        <license>
+            <name>The MIT license</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-  <developers>
-    <developer>
-      <id>sanderv32</id>
-      <name>Alexander Verhaar</name>
-    </developer>
-  </developers>
+    <developers>
+        <developer>
+            <id>sanderv32</id>
+            <name>Alexander Verhaar</name>
+        </developer>
+    </developers>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.jenkins-ci.main</groupId>
-      <artifactId>jenkins-war</artifactId>
-      <type>war</type>
-      <version>${jenkins.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>git</artifactId>
-      <version>2.2.5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>4.5.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.10</version>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <version>1.9.5</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+    <dependencies>
+        <dependency>
+            <groupId>org.jenkins-ci.main</groupId>
+            <artifactId>jenkins-war</artifactId>
+            <type>war</type>
+            <version>${jenkins.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>git</artifactId>
+            <version>2.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-  <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
-  <repositories>
-    <repository>
-      <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
-    </repository>
-  </repositories>
+    <profiles>
+        <profile>
+            <id>withIntegrationTest</id>
+            <!--These tests can come in the way of somebody that doesn't have a docker ready environment. So it is better
+            to give a way to skip them-->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>${docker.maven.plugin.version}</version>
+                        <configuration>
+                            <logDate>default</logDate>
+                             <images>
+                                <!-- Docker Image to use -->
+                                <image>
+                                    <alias>ODS_DB</alias>
+                                    <!-- Artefact Image-->
+                                    <name>alexeiled/docker-oracle-xe-11g:latest</name>
+                                    <run>
+                                        <ports>
+                                            <port>49160:22</port>
+                                            <port>49161:1521</port>
+                                            <port>49162:8080</port>
+                                        </ports>
+                                        <wait>
+                                            <log>DB server startup</log>
+                                            <!--<url>http://192.168.59.103:49162/</url>-->
+                                            <time>30000</time>
+                                        </wait>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <!-- Connect this plugin to the maven lifecycle around the integration-test phase. I.e. start the container
+                             in pre-integration-test and stop it in post-integration-test. -->
+                        <executions>
+                            <execution>
+                                <id>start</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>stop</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
 
-  <pluginRepositories>
-    <pluginRepository>
-      <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
-    </pluginRepository>
-  </pluginRepositories>
 
-  <scm>
-    <connection>scm:git:ssh://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/gogs-webhook-plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
-    <tag>gogs-webhook-1.0.1</tag>
-  </scm>
+<!--                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.13</version>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>-->
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/gogs-webhook-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
+        <tag>gogs-webhook-1.0.1</tag>
+    </scm>
 </project>
