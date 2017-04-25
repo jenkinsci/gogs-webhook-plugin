@@ -2,10 +2,6 @@ version: '2'
 
 services:
 
-  web:
-    depends_on:
-      - jenkins
-
   jenkins:
     build: ./jenkins-dockerfile
     environment:
@@ -14,15 +10,7 @@ services:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     volumes:
       - jenkins2-data:/var/jenkins_home
-      - {{ work_dir }}/ci/ssh-keys:/ssh-keys
-    env_file:
-      - {{ work_dir }}/ci/GitHub_OAuth_IDs.env
     restart: unless-stopped
-
-  ssh-agent:
-    image: jenkinsci/ssh-slave
-    env_file:
-      - {{ work_dir }}/ci/ssh-keys/slave-keys.env
 
 volumes:
 
