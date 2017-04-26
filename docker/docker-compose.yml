@@ -3,7 +3,7 @@ version: '2'
 services:
 
   jenkins:
-    build: ./jenkins-dockerfile
+    build: ./jenkins-Dockerfile
     environment:
       - JENKINS_OPTS=--httpPort=8080
       - JENKINS_SLAVE_AGENT_PORT=50000
@@ -11,7 +11,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - jenkins2-data:/var/jenkins_home
+      - /var/jenkins_home
     restart: unless-stopped
 
 volumes:

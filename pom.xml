@@ -17,6 +17,8 @@
         <java.level>7</java.level>
         <jenkins-test-harness.version>2.13</jenkins-test-harness.version>
         <docker.maven.plugin.version>0.20.1</docker.maven.plugin.version>
+
+        <docker.removeVolumes>true</docker.removeVolumes>
     </properties>
 
     <name>Jenkins Gogs plugin</name>
@@ -88,26 +90,25 @@
                         <version>${docker.maven.plugin.version}</version>
                         <configuration>
                             <logDate>default</logDate>
-                             <images>
+                            <images>
                                 <!-- Docker Image to use -->
                                 <image>
-                                    <alias>ODS_DB</alias>
-                                    <!-- Artefact Image-->
-                                    <name>alexeiled/docker-oracle-xe-11g:latest</name>
-                                    <run>
-                                        <ports>
-                                            <port>49160:22</port>
-                                            <port>49161:1521</port>
-                                            <port>49162:8080</port>
-                                        </ports>
-                                        <wait>
-                                            <log>DB server startup</log>
-                                            <!--<url>http://192.168.59.103:49162/</url>-->
-                                            <time>30000</time>
-                                        </wait>
-                                    </run>
+                                    <alias>jenkins</alias>
+                                    <name>local/test-jenkins</name>
+
+                                    <external>
+                                        <type>compose</type>
+                                        <basedir>docker</basedir>
+                                        <composeFile>docker-compose.yml</composeFile>
+                                    </external>
                                 </image>
                             </images>
+                            <volumes>
+                                <volume>
+                                    <name>jenkins2-data</name>
+                                    <driver>local</driver>
+                                </volume>
+                            </volumes>
                         </configuration>
                         <!-- Connect this plugin to the maven lifecycle around the integration-test phase. I.e. start the container
                              in pre-integration-test and stop it in post-integration-test. -->
@@ -116,6 +117,7 @@
                                 <id>start</id>
                                 <phase>pre-integration-test</phase>
                                 <goals>
+                                    <goal>build</goal>
                                     <goal>start</goal>
                                 </goals>
                             </execution>
@@ -130,25 +132,25 @@
                     </plugin>
 
 
-<!--                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>2.13</version>
-                        <executions>
-                            <execution>
-                                <id>integration-test</id>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>verify</id>
-                                <goals>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>-->
+                    <!--                    <plugin>
+                                            <groupId>org.apache.maven.plugins</groupId>
+                                            <artifactId>maven-failsafe-plugin</artifactId>
+                                            <version>2.13</version>
+                                            <executions>
+                                                <execution>
+                                                    <id>integration-test</id>
+                                                    <goals>
+                                                        <goal>integration-test</goal>
+                                                    </goals>
+                                                </execution>
+                                                <execution>
+                                                    <id>verify</id>
+                                                    <goals>
+                                                        <goal>verify</goal>
+                                                    </goals>
+                                                </execution>
+                                            </executions>
+                                        </plugin>-->
                 </plugins>
             </build>
         </profile>
