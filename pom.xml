@@ -96,7 +96,7 @@
                                     <goal>copy-resources</goal>
                                 </goals>
                                 <configuration>
-                                    <outputDirectory>${basedir}/docker/jenkins-dockerfile</outputDirectory>
+                                    <outputDirectory>${basedir}/src/test/docker/jenkins-dockerfile</outputDirectory>
                                     <resources>
                                         <resource>
                                             <directory>${basedir}/target</directory>
@@ -111,48 +111,35 @@
                     </plugin>
 
                     <plugin>
-                        <groupId>io.fabric8</groupId>
-                        <artifactId>docker-maven-plugin</artifactId>
-                        <version>${docker.maven.plugin.version}</version>
-                        <configuration>
-                            <logDate>default</logDate>
-                            <images>
-                                <!-- Docker Image to use -->
-                                <image>
-                                    <alias>jenkins</alias>
-                                    <name>local/test-jenkins</name>
-
-                                    <external>
-                                        <type>compose</type>
-                                        <basedir>docker</basedir>
-                                        <composeFile>docker-compose.yml</composeFile>
-                                    </external>
-                                </image>
-                            </images>
-                            <volumes>
-                                <volume>
-                                    <name>jenkins2-data</name>
-                                    <driver>local</driver>
-                                </volume>
-                            </volumes>
-                        </configuration>
-                        <!-- Connect this plugin to the maven lifecycle around the integration-test phase. I.e. start the container
-                             in pre-integration-test and stop it in post-integration-test. -->
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.6.0</version>
                         <executions>
                             <execution>
-                                <id>start</id>
+                                <id>start-test-environmebt</id>
                                 <phase>pre-integration-test</phase>
                                 <goals>
-                                    <goal>build</goal>
-                                    <goal>start</goal>
+                                    <goal>exec</goal>
                                 </goals>
+                                <configuration>
+                                    <executable>sh</executable>
+                                    <arguments>
+                                        <argument>${basedir}/src/test/scripts/start-test-environment.sh</argument>
+                                    </arguments>
+                                </configuration>
                             </execution>
                             <execution>
-                                <id>stop</id>
+                                <id>stop-test-environmebt</id>
                                 <phase>post-integration-test</phase>
                                 <goals>
-                                    <goal>stop</goal>
+                                    <goal>exec</goal>
                                 </goals>
+                                <configuration>
+                                    <executable>sh</executable>
+                                    <arguments>
+                                        <argument>${basedir}/src/test/scripts/stop-test-environment.sh</argument>
+                                    </arguments>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

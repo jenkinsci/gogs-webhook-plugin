@@ -29,4 +29,4 @@ buildNumber.properties
 .idea/
 gogs-webhook.iml
 
-/docker/jenkins-dockerfile/gogs-webhook.hpi
+/src/test/docker/jenkins-dockerfile/gogs-webhook.hpi
