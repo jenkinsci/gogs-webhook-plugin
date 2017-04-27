@@ -14,6 +14,3 @@ services:
       - /var/jenkins_home
     restart: unless-stopped
 
-volumes:
-  jenkins2-data:
-    driver: local
