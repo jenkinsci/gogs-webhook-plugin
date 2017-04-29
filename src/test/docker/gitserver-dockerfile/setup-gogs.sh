@@ -40,7 +40,7 @@ curl -v -X POST -s \
 
 cat /app/repos-to-mirror
 
-while IFS= read -r LINE
+while IFS= read -r LINE  || [[ -n "${LINE}" ]];
 do
   echo "==LINE: ${LINE}"
   REMOTE_REPO_URL="$(echo ${LINE} | cut -f1 -d'|')"
