@@ -4,6 +4,7 @@ services:
 
   jenkins:
     build: ./jenkins-Dockerfile
+    container_name: jenkins
     environment:
       - JENKINS_OPTS=--httpPort=8080
       - JENKINS_SLAVE_AGENT_PORT=50000
@@ -14,3 +15,12 @@ services:
       - /var/jenkins_home
     restart: unless-stopped
 
+  gitserver:
+    build:
+      context: ./gitserver-dockerfile/
+      args:
+      - FIRST_USER=butler
+    ports:
+      - "3000:3000"
+    container_name: gitserver
+    restart: unless-stopped
