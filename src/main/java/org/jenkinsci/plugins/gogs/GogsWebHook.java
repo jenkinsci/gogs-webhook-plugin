@@ -41,6 +41,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -200,13 +201,9 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // job not found by name, perhaps it's a multibranch job so try by `job/branch`
         String ref = (String)webhookPayload.get("ref");
-        String[] components = ref.split("/");
+        String branchName = urlEncode(ref.replace("refs/heads/", ""));
 
-        if(components.length == 0)
-            return null;
-
-        String branch = components[components.length-1];
-        return GogsUtils.find(jobName + "/" + branch, Job.class);
+        return GogsUtils.find(jobName + "/" + branchName, Job.class);
     }
 
     /**
@@ -224,6 +221,15 @@ public class GogsWebHook implements UnprotectedRootAction {
       resp.setStatus(result.getStatus());
       resp.addHeader("Content-Type","application/json");
       resp.getWriter().print(json.toString());
+    }
+
+    private static String urlEncode(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // this can't really happen, UTF-8 should always be supported
+            return null;
+        }
     }
 
     /**
