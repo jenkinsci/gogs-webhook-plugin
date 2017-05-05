@@ -114,7 +114,7 @@ public class GogsWebHook implements UnprotectedRootAction {
       }
 
       // Get querystring from the URI
-      Map querystring = splitQuery(req.getQueryString());
+      Map<String, String> querystring = splitQuery(req.getQueryString());
       String jobName = querystring.get("job").toString();
       if ( jobName!=null && jobName.isEmpty() ) {
         result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
@@ -132,7 +132,7 @@ public class GogsWebHook implements UnprotectedRootAction {
           body = body.substring(8);
         }
 
-        JSONObject jsonObject = JSONObject.fromObject(body);
+        JSONObject webhookPayload = JSONObject.fromObject(body);
 
         String jSecret = null;
         boolean foundJob = false;
@@ -140,36 +140,17 @@ public class GogsWebHook implements UnprotectedRootAction {
         SecurityContext saveCtx = SecurityContextHolder.getContext();
 
         try {
-            Jenkins jenkins = Jenkins.getActiveInstance();
-            ACL acl = jenkins.getACL();
-            acl.impersonate(ACL.SYSTEM);
+            ACL.impersonate(ACL.SYSTEM);
 
-            Job job = GogsUtils.find(jobName, Job.class); 
+            Job<?, ?> job = findJob(jobName, webhookPayload);
 
             if (job != null) {
                 foundJob = true;
 				/* secret is stored in the properties of Job */
-				final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+				final GogsProjectProperty property = job.getProperty(GogsProjectProperty.class);
 				if (property != null) { /* only if Gogs secret is defined on the job */
 					jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
 				}
-            } 
-            else {
-                String ref = (String)jsonObject.get("ref"); 
-                String[] components = ref.split("/"); 
-                ref = components[components.length-1]; 
-                
-                job = GogsUtils.find(jobName + "/" + ref, Job.class); 
-
-                if (job != null) {
-                    foundJob = true;
-                    /* secret is stored in the properties of Job */
-                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                    if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                    }
-                } 
-                
             }
         } finally {
             SecurityContextHolder.setContext(saveCtx);
@@ -177,7 +158,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         String gSecret = null;
         if (gogsSignature==null){
-          gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
+          gSecret = webhookPayload.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
         }
         else{
           try{
@@ -212,6 +193,22 @@ public class GogsWebHook implements UnprotectedRootAction {
       exitWebHook(result, rsp);
     }
 
+    private Job<?, ?> findJob(String jobName, JSONObject webhookPayload) {
+        Job<?, ?> job = GogsUtils.find(jobName, Job.class);
+        if(job != null)
+            return job;
+
+        // job not found by name, perhaps it's a multibranch job so try by `job/branch`
+        String ref = (String)webhookPayload.get("ref");
+        String[] components = ref.split("/");
+
+        if(components.length == 0)
+            return null;
+
+        String branch = components[components.length-1];
+        return GogsUtils.find(jobName + "/" + branch, Job.class);
+    }
+
     /**
      * Exit the WebHook
      *
@@ -236,7 +233,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @return returns map from querystring
      */
     private static Map<String, String> splitQuery(String qs) throws UnsupportedEncodingException {
-      final Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+      final Map<String, String> query_pairs = new LinkedHashMap<>();
       final String[] pairs = qs.split("&");
       for (String pair : pairs) {
         final int idx = pair.indexOf("=");
