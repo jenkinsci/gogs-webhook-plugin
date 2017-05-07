@@ -106,8 +106,7 @@
                         <version>3.0.2</version>
                         <executions>
                             <execution>
-                                <id>copy-resources</id>
-                                <!-- here the phase you need -->
+                                <id>copy-HPI-to-dockerDir</id>
                                 <phase>pre-integration-test</phase>
                                 <goals>
                                     <goal>copy-resources</goal>
