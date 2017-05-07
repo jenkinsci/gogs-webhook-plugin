@@ -84,7 +84,7 @@ public class GogsConfigHandler {
     }
 
     /**
-     * Creates a webhook in Gogs
+     * Creates a webhook in Gogs with the passed json configuration string
      *
      * @param jsonCommand A json buffer with the creation command of the web hook
      * @param projectName the project (owned by the user) where the webHook should be created
@@ -93,7 +93,7 @@ public class GogsConfigHandler {
     int createWebHook(String jsonCommand, String projectName) throws IOException {
 
         String gogsHooksConfigUrl = buildGogsHooksConfigUrl(this.getGogsUrl(), this.gogsServer_user, projectName);
-        HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, gogsServer_port);
+        HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
         Executor executor = Executor.newInstance()
                 .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
                 .authPreemptive(httpHost);
@@ -108,24 +108,50 @@ public class GogsConfigHandler {
         return id;
     }
 
+    /**
+     * Creates a webhook in Gogs with the passed json configuration string
+     *
+     * @param jsonCommandFile A json file containing the creation command of the web hook
+     * @param projectName     the project (owned by the user) where the webHook should be created
+     * @throws IOException something went wrong
+     */
     int createWebHook(File jsonCommandFile, String projectName) throws IOException {
         byte[] encoded = Files.readAllBytes(jsonCommandFile.toPath());
         String jsonCommand = new String(encoded, Charset.defaultCharset());
 
-        return createWebHook(jsonCommand,projectName);
+        return createWebHook(jsonCommand, projectName);
     }
 
-        /**
-         * Build the URL used to configure the web hook on the Gogs server
-         *
-         * @param gogsBaseUrl the protocol, host and port of the Gogs server
-         * @param user        the user under which the repository is stored
-         * @param projectName the project to add the web hook to
-         * @return a properly formatted configuration url
-         */
+    /**
+     * Build the URL used to configure the web hook on the Gogs server
+     *
+     * @param gogsBaseUrl the protocol, host and port of the Gogs server
+     * @param user        the user under which the repository is stored
+     * @param projectName the project to add the web hook to
+     * @return a properly formatted configuration url
+     */
     private String buildGogsHooksConfigUrl(String gogsBaseUrl, String user, String projectName) {
         return gogsBaseUrl + "/api/v1/repos/" + user + "/" + projectName + "/hooks";
     }
+
+    void removeHook(String projectName, int hookId) throws IOException {
+        String gogsHooksConfigUrl = buildGogsHooksConfigUrl(this.getGogsUrl(), this.gogsServer_user, projectName);
+
+        HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
+        Executor executor = Executor.newInstance()
+                .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
+                .authPreemptive(httpHost);
+
+        int result = executor
+                .execute(Request.Delete(gogsHooksConfigUrl + "/"+ hookId))
+                .returnResponse().getStatusLine().getStatusCode();
+
+        if(result != 204){
+            throw new IOException("Delete hook did not return the expected value (returned " + result + ")");
+        }
+
+    }
+
 
     public String getGogsServer_nodeName() {
         return gogsServer_nodeName;

@@ -33,11 +33,13 @@ public class GogsWebHook_IT {
     public void smokeTest() throws Exception {
         GogsConfigHandler gogsServer = new GogsConfigHandler(GOGS_URL, GOGS_USER, GOGS_PASSWORD);
 
-        gogsServer.waitForServer(5,5);
+        gogsServer.waitForServer(5, 5);
 
-        File jsonCommandFile = new File(JSON_COMMANDFILE_PATH +"webHookDefinition_1.json");
+        File jsonCommandFile = new File(JSON_COMMANDFILE_PATH + "webHookDefinition_1.json");
         int hookId = gogsServer.createWebHook(jsonCommandFile, "demoapp");
         log.info("Created hook with ID " + hookId);
+
+        gogsServer.removeHook("demoapp", hookId);
 
 
 //        int status = Request.Get(JENKINS_URL)
@@ -45,9 +47,6 @@ public class GogsWebHook_IT {
 //        assertEquals("Not the expected HTTP status", 200, status);
 
 
-//        String jsonCommand = "{\"type\":\"gogs\",\"config\":{\"url\":\"" + WEBHOOK_URL + "\",\"content_type\":\"json\"},\"events\":[\"create\",\"push\",\"pull_request\"],\"active\":true}";
-//        String gogsHooksConfigUrl = buildGogsHooksConfigUrl(GOGS_URL, "butler", "demoapp");
-//        int hookId = createWebHook(gogsHooksConfigUrl, jsonCommand);
     }
 
 
