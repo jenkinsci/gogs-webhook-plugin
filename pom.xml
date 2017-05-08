@@ -128,6 +128,25 @@
                                     </resources>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>copy-testSources</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <resources>
+                                        <resource>
+                                            <directory>${basedir}/src/test/test-repos</directory>
+                                            <includes>
+                                                <include>**/*.*</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                    <outputDirectory>${basedir}/target/test-repos</outputDirectory>
+                                </configuration>
+                            </execution>
+
                         </executions>
                     </plugin>
 

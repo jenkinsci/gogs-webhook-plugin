@@ -40,7 +40,7 @@ public class GogsWebHook_IT {
         log.info("Created hook with ID " + hookId);
 
         gogsServer.removeHook("demoapp", hookId);
-        gogsServer.createEmptyRepo("demoApp2");
+//        gogsServer.createEmptyRepo("demoApp2");
 
 
 //        int status = Request.Get(JENKINS_URL)
