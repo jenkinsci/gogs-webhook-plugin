@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.gogs;
 
 import org.apache.http.HttpHost;
 import org.apache.http.client.fluent.Executor;
+import org.apache.http.client.fluent.Form;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.json.JSONObject;
@@ -24,6 +25,8 @@ public class GogsConfigHandler {
     private int gogsServer_port;
     private String gogsServer_user;
     private String gogsServer_password;
+    private Executor executor = null;
+    private String gogsServer_apiUrl = null;
 
 
     /**
@@ -71,7 +74,6 @@ public class GogsConfigHandler {
             }
         }
         throw new TimeoutException("Timeout waiting for availability of " + testUrl);
-
     }
 
     /**
@@ -84,7 +86,7 @@ public class GogsConfigHandler {
     }
 
     /**
-     * Creates a webhook in Gogs with the passed json configuration string
+     * Creates a web hook in Gogs with the passed json configuration string
      *
      * @param jsonCommand A json buffer with the creation command of the web hook
      * @param projectName the project (owned by the user) where the webHook should be created
@@ -92,12 +94,11 @@ public class GogsConfigHandler {
      */
     int createWebHook(String jsonCommand, String projectName) throws IOException {
 
-        String gogsHooksConfigUrl = buildGogsHooksConfigUrl(this.getGogsUrl(), this.gogsServer_user, projectName);
-        HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
-        Executor executor = Executor.newInstance()
-                .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
-                .authPreemptive(httpHost);
+        String gogsHooksConfigUrl = getGogsServer_apiUrl()
+                + "repos/" + this.gogsServer_user
+                + "/" + projectName + "/hooks";
 
+        Executor executor = getExecutor();
 
         String result = executor
                 .execute(Request.Post(gogsHooksConfigUrl).bodyString(jsonCommand, ContentType.APPLICATION_JSON))
@@ -122,36 +123,84 @@ public class GogsConfigHandler {
         return createWebHook(jsonCommand, projectName);
     }
 
+
     /**
-     * Build the URL used to configure the web hook on the Gogs server
+     * Removes a web hook from a GOGS project
      *
-     * @param gogsBaseUrl the protocol, host and port of the Gogs server
-     * @param user        the user under which the repository is stored
-     * @param projectName the project to add the web hook to
-     * @return a properly formatted configuration url
+     * @param projectName Name of the Gogs project to remove the hook from
+     * @param hookId      The ID of the hook to remove
+     * @throws IOException something went wrong
      */
-    private String buildGogsHooksConfigUrl(String gogsBaseUrl, String user, String projectName) {
-        return gogsBaseUrl + "/api/v1/repos/" + user + "/" + projectName + "/hooks";
-    }
-
     void removeHook(String projectName, int hookId) throws IOException {
-        String gogsHooksConfigUrl = buildGogsHooksConfigUrl(this.getGogsUrl(), this.gogsServer_user, projectName);
+        String gogsHooksConfigUrl = getGogsServer_apiUrl()
+                + "repos/" + this.gogsServer_user
+                + "/" + projectName + "/hooks/" + hookId;
 
-        HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
-        Executor executor = Executor.newInstance()
-                .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
-                .authPreemptive(httpHost);
+        Executor executor = getExecutor();
 
         int result = executor
-                .execute(Request.Delete(gogsHooksConfigUrl + "/"+ hookId))
+                .execute(Request.Delete(gogsHooksConfigUrl))
                 .returnResponse().getStatusLine().getStatusCode();
 
-        if(result != 204){
+        if (result != 204) {
             throw new IOException("Delete hook did not return the expected value (returned " + result + ")");
         }
-
     }
 
+    /**
+     * Creates an empty repository (under the configured user).
+     * It is created as a public repository, un-initalized.
+     *
+     * @param projectName the project name (repository) to create
+     * @throws IOException Something went wrong
+     */
+    void createEmptyRepo(String projectName) throws IOException {
+
+        Executor executor = getExecutor();
+        String gogsHooksConfigUrl = getGogsServer_apiUrl() + "user/repos";
+
+        int result = executor
+                .execute(Request
+                        .Post(gogsHooksConfigUrl)
+                        .bodyForm(Form.form()
+                                .add("name", projectName)
+                                .add("description", "API generated repository")
+                                .add("private", "false")
+                                .add("auto_init", "false")
+                                .build()
+                        )
+                )
+                .returnResponse().getStatusLine().getStatusCode();
+
+
+        if (result != 201) {
+            throw new IOException("Repository creation call did not return the expected value (returned " + result + ")");
+        }
+    }
+
+
+    /**
+     * Gets a Executor object. The Executor object allows to cache the authentication data.
+     * If it was not initialized, the method instantiates one.
+     *
+     * @return an initialized Executor object
+     */
+    private Executor getExecutor() {
+        if (this.executor == null) {
+            HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
+            this.executor = Executor.newInstance()
+                    .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
+                    .authPreemptive(httpHost);
+        }
+        return this.executor;
+    }
+
+    public String getGogsServer_apiUrl() {
+        if (this.gogsServer_apiUrl == null) {
+            this.gogsServer_apiUrl = this.getGogsUrl() + "/api/v1/";
+        }
+        return gogsServer_apiUrl;
+    }
 
     public String getGogsServer_nodeName() {
         return gogsServer_nodeName;
