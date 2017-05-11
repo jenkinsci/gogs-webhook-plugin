@@ -5,6 +5,9 @@ import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -16,9 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 
-import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_BRANCH_SECTION;
-import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_REMOTE_SECTION;
-import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_USER_SECTION;
+import static org.eclipse.jgit.lib.ConfigConstants.*;
 import static org.junit.Assert.fail;
 
 //TODO: Update and push local repository to Gogs
@@ -28,7 +29,7 @@ public class GogsWebHook_IT {
     public static final String GOGS_URL = "http://localhost:3000";
     public static final String GOGS_USER = "butler";
     public static final String GOGS_PASSWORD = "butler";
-    public static final String WEBHOOK_URL = "http://localhost:8080/job/demoapp/build?delay=0";
+    public static final String WEBHOOK_URL = "http://localhost:8080/job/testRep1/build?delay=0";
     public static final String JSON_COMMANDFILE_PATH = "target/test-classes/Gogs-config-json/";
     final Logger log = LoggerFactory.getLogger(GogsWebHook_IT.class);
 
@@ -47,13 +48,14 @@ public class GogsWebHook_IT {
         gogsServer.waitForServer(5, 5);
 
         File jsonCommandFile = new File(JSON_COMMANDFILE_PATH + "webHookDefinition_1.json");
-        int hookId = gogsServer.createWebHook(jsonCommandFile, "demoapp");
+        int hookId = gogsServer.createWebHook(jsonCommandFile, "demoApp");
         log.info("Created hook with ID " + hookId);
 
-        gogsServer.removeHook("demoapp", hookId);
+        gogsServer.removeHook("demoApp", hookId);
 
+        //Create the test repository on the server
         try {
-            gogsServer.createEmptyRepo("demoApp2");
+            gogsServer.createEmptyRepo("testRep1");
         } catch (IOException e) {
             //check for the exist message;
             if (e.getMessage().contains("422")) {
@@ -69,13 +71,14 @@ public class GogsWebHook_IT {
 
         //Configure user, email, remote and tracking branch
         StoredConfig config = git.getRepository().getConfig();
-        config.setString(CONFIG_USER_SECTION,null,"name","Automated Test");
-        config.setString(CONFIG_USER_SECTION,null,"email","test@test.org");
-        config.setString(CONFIG_REMOTE_SECTION, "origin", "url","http://localhost:3000/butler/demoApp2.git");
-        config.setString(CONFIG_REMOTE_SECTION, "origin", "fetch", "ref-spec");
+        config.setString(CONFIG_USER_SECTION, null, "name", "Automated Test");
+        config.setString(CONFIG_USER_SECTION, null, "email", "test@test.org");
+        config.setString(CONFIG_REMOTE_SECTION, "origin", "url", "http://localhost:3000/butler/testRep1.git");
+        config.setString(CONFIG_REMOTE_SECTION, "origin", "fetch", "+refs/heads/*:refs/remotes/origin/*");
         config.setString(CONFIG_BRANCH_SECTION, "master", "remote", "origin");
         config.setString(CONFIG_BRANCH_SECTION, "master", "merge", "refs/heads/master");
         config.save();
+
 
         //add the files located there and commit them
         Status status = git.status().call();
@@ -83,11 +86,16 @@ public class GogsWebHook_IT {
         RevCommit commit = git.commit().setMessage("Repos initialization").call();
 
 
-
         //push
-//        RemoteConfig rc = new RemoteConfig(config, "origin");
-//        assertFalse(rc.getPushURIs().isEmpty());
-//        assertEquals("short:project.git", rc.getPushURIs().get(0).toASCIIString());
+        UsernamePasswordCredentialsProvider user2 = new UsernamePasswordCredentialsProvider("butler", "butler");
+
+        RefSpec spec = new RefSpec("refs/heads/master:refs/heads/master");
+        Iterable<PushResult> resultIterable = git.push()
+                .setRemote("origin")
+                .setCredentialsProvider(user2)
+                .setRefSpecs(spec)
+                .call();
+
 
 //      //Check if Jenkins server is there
 //        int status = Request.Get(JENKINS_URL)

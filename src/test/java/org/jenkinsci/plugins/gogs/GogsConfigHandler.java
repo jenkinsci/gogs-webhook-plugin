@@ -165,7 +165,7 @@ public class GogsConfigHandler {
                         .bodyForm(Form.form()
                                 .add("name", projectName)
                                 .add("description", "API generated repository")
-                                .add("private", "false")
+                                .add("private", "true")
                                 .add("auto_init", "false")
                                 .build()
                         )
