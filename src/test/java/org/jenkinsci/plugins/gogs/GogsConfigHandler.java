@@ -149,10 +149,10 @@ public class GogsConfigHandler {
 
     /**
      * Creates an empty repository (under the configured user).
-     * It is created as a public repository, un-initalized.
+     * It is created as a public repository, un-initialized.
      *
      * @param projectName the project name (repository) to create
-     * @throws IOException Something went wrong
+     * @throws IOException Something went wrong (example: the repo already exists)
      */
     void createEmptyRepo(String projectName) throws IOException {
 
