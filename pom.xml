@@ -139,7 +139,7 @@
                                         <resource>
                                             <directory>${basedir}/src/test/test-repos</directory>
                                             <includes>
-                                                <include>**/*.*</include>
+                                                <include>**/*</include>
                                             </includes>
                                         </resource>
                                     </resources>
