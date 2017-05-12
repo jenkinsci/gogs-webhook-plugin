@@ -1,2 +1,3 @@
-## Randomly failing JUnit tests
-Main purpose is to similuate randomly failing and skipping test.
+# Test project
+
+This a test project used for the integration test of the GOGS Webhook.

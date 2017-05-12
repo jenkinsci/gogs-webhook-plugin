@@ -1,50 +1,17 @@
 pipeline {
-  agent any
-  environment {
-    MY_NAME="Butler"
-    DOCKER_IMAGE_NAME="app:1.0.0"
-  }
-  stages {
-    stage('Build') {
-      agent {
-        dockerfile {
-          filename 'Dockerfile.build'
-          args '-v maven-cache:/maven-cache'
-        }
-      }
-      steps {
-        sh 'mvn -B -s /settings.xml package -DskipTest=true'
-        stash(name: 'generated-jars', includes: 'target/*.jar')
-      }
-    }
-    stage('Verify') {
-      agent {
-        dockerfile {
-          filename 'Dockerfile.build'
-          args '-v maven-cache:/maven-cache'
-        }
-      }
-      steps {
-        parallel(
-          "Unit Tests": {
-            sh 'mvn -B -s /settings.xml test'
-          },
-          "Integration Tests": {
-            sh 'mvn -B -s /settings.xml BAD_MAVEN_STAGE'
-          }
-        )
-      }
-    }
-    stage('Deploy') {
-      agent { label 'docker' }
-      steps {
-        unstash 'generated-jars'
-        sh "docker build -t ${DOCKER_IMAGE_NAME} ./"
-        input(message: "Is it OK to deploy ${MY_NAME} ?", id: 'message')
+    agent any
 
-        sh "docker tag ${DOCKER_IMAGE_NAME} localhost:5000/${DOCKER_IMAGE_NAME}"
-        sh "docker push localhost:5000/${DOCKER_IMAGE_NAME}"
-      }
+    stages {
+        stage('Create marker') {
+            steps {
+                echo 'Creating..'
+                sh 'bash scripts/generate_marker.sh'
+            }
+        }
+        stage('Deploy marker') {
+            steps {
+                echo 'Deploying....'
+            }
+        }
     }
-  }
 }
