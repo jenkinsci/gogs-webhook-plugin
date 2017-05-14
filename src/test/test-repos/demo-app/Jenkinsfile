@@ -8,8 +8,10 @@ pipeline {
                 # This is a workaround as these variables are not loaded properly
                 script {
                     env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    env.GIT_BRANCH = sh(returnStdout: true, script: 'git branch')
                 }
-                echo "${env.GIT_COMMIT}"
+                echo "Commit: ${env.GIT_COMMIT}"
+                echo "Branch: ${env.GIT_BRANCH}"
                 sh 'bash scripts/generate_marker.sh'
                 sh 'cat ./marker.txt'
             }
@@ -18,6 +20,7 @@ pipeline {
             steps {
                 echo 'Deploying....'
                 archive 'marker.txt'
+                sh 'cp marker.txt /test/data/'
             }
         }
     }
