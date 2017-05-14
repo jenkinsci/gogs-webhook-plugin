@@ -1,11 +1,12 @@
 package org.jenkinsci.plugins.gogs;
 
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 import org.apache.http.HttpHost;
 import org.apache.http.client.fluent.Executor;
 import org.apache.http.client.fluent.Form;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
-import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,8 +104,8 @@ public class GogsConfigHandler {
         String result = executor
                 .execute(Request.Post(gogsHooksConfigUrl).bodyString(jsonCommand, ContentType.APPLICATION_JSON))
                 .returnContent().asString();
-        JSONObject obj = new JSONObject(result);
-        int id = obj.getInt("id");
+        JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( result );
+        int id = jsonObject.getInt("id");
 
         return id;
     }

@@ -86,24 +86,17 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20160810</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
             <version>4.7.0.201704051617-r</version>
             <scope>test</scope>
         </dependency>
-        <!--<dependency>-->
-            <!-- FIXME: uncommenting this dependecy breaks the unit tests -->
-            <!--<groupId>com.offbytwo.jenkins</groupId>-->
-            <!--<artifactId>jenkins-client</artifactId>-->
-            <!--<version>0.3.7</version>-->
-            <!--<scope>test</scope>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>com.offbytwo.jenkins</groupId>
+            <artifactId>jenkins-client</artifactId>
+            <version>0.3.7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <profiles>
