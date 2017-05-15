@@ -1,5 +1,8 @@
 package org.jenkinsci.plugins.gogs;
 
+import com.offbytwo.jenkins.JenkinsServer;
+import com.offbytwo.jenkins.model.Job;
+import com.offbytwo.jenkins.model.QueueReference;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.dircache.DirCache;
@@ -18,14 +21,18 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 
 import static org.eclipse.jgit.lib.ConfigConstants.*;
+import static org.jenkinsci.plugins.gogs.JenkinsHandler.waitUntilJenkinsHasBeenStartedUp;
 import static org.junit.Assert.fail;
 
 //TODO: Update and push local repository to Gogs
 
 public class GogsWebHook_IT {
     public static final String JENKINS_URL = "http://localhost:8080/";
+    public static final String JENKINS_USER = "butler";
+    public static final String JENKINS_PASSWORD = "butler";
     public static final String GOGS_URL = "http://localhost:3000";
     public static final String GOGS_USER = "butler";
     public static final String GOGS_PASSWORD = "butler";
@@ -96,12 +103,60 @@ public class GogsWebHook_IT {
                 .setRefSpecs(spec)
                 .call();
 
+        JenkinsServer jenkins = new JenkinsServer(new URI(JENKINS_URL), JENKINS_USER, JENKINS_PASSWORD);
 
-//      //Check if Jenkins server is there
-//        int status = Request.Get(JENKINS_URL)
-//                .execute().returnResponse().getStatusLine().getStatusCode();
-//        assertEquals("Not the expected HTTP status", 200, status);
+        waitUntilJenkinsHasBeenStartedUp(jenkins);
 
+        Job job = jenkins.getJob("test project");
+        if (job == null) {
+            //create job
+            fail("Job is missing");
+//            jenkins.createJob("test",configXml);
+        }
+        QueueReference ref = job.build();
+
+        String configXml = jenkins.getJobXml("test project");
+        log.info("Job config: " + configXml);
+        String marker = job.getFileFromWorkspace("artifact/marker.txt");
+
+//        downloadArtifact
+
+
+//<?xml version='1.0' encoding='UTF-8'?>
+//<flow-definition plugin="workflow-job@2.11">
+//  <actions/>
+//  <description></description>
+//  <keepDependencies>false</keepDependencies>
+//  <properties>
+//    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+//      <triggers/>
+//    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+//  </properties>
+//  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@2.30">
+//    <scm class="hudson.plugins.git.GitSCM" plugin="git@3.3.0">
+//      <configVersion>2</configVersion>
+//      <userRemoteConfigs>
+//        <hudson.plugins.git.UserRemoteConfig>
+//          <url>http://gitserver:3000/butler/testRep1</url>
+//          <credentialsId>GOGS-USER</credentialsId>
+//        </hudson.plugins.git.UserRemoteConfig>
+//      </userRemoteConfigs>
+//      <branches>
+//        <hudson.plugins.git.BranchSpec>
+//          <name>*/master</name>
+//        </hudson.plugins.git.BranchSpec>
+//      </branches>
+//      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+//      <submoduleCfg class="list"/>
+//      <extensions/>
+//    </scm>
+//    <scriptPath>Jenkinsfile</scriptPath>
+//    <lightweight>false</lightweight>
+//  </definition>
+//  <triggers/>
+//  <disabled>false</disabled>
+//</flow-definition>
+//
     }
 
 
