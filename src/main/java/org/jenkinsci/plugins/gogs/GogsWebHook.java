@@ -144,7 +144,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             ACL acl = jenkins.getACL();
             acl.impersonate(ACL.SYSTEM);
 
-            Job job = GogsUtils.find(jobName, Job.class);
+            Job job = GogsUtils.find(jobName, Job.class); 
 
             if (job != null) {
                 foundJob = true;
@@ -153,6 +153,23 @@ public class GogsWebHook implements UnprotectedRootAction {
 				if (property != null) { /* only if Gogs secret is defined on the job */
 					jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
 				}
+            } 
+            else {
+                String ref = (String)jsonObject.get("ref"); 
+                String[] components = ref.split("/"); 
+                ref = components[components.length-1]; 
+                
+                job = GogsUtils.find(jobName + "/" + ref, Job.class); 
+
+                if (job != null) {
+                    foundJob = true;
+                    /* secret is stored in the properties of Job */
+                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                    if (property != null) { /* only if Gogs secret is defined on the job */
+                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                    }
+                } 
+                
             }
         } finally {
             SecurityContextHolder.setContext(saveCtx);
