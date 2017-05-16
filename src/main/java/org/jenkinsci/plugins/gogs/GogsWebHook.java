@@ -140,7 +140,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             result.setStatus(404, "No value assigned to parameter 'job'");
             exitWebHook(result, rsp);
             return;
-        }else{
+        } else {
             jobName = jobObject.toString();
         }
 

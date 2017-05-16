@@ -84,13 +84,13 @@ public class GogsWebHookTest {
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
 
         //perform the test
-        performDoIndexTest(staplerRequest, staplerResponse,uniqueFile);
+        performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
         String expectedOutput = "Only push event can be accepted.";
-        isExpectedOutput(uniqueFile,expectedOutput);
+        isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
     }
@@ -251,11 +251,11 @@ public class GogsWebHookTest {
         printWriter.close();
     }
 
-    private void isExpectedOutput(File uniqueFile, String expectedOutput ) throws IOException {
+    private void isExpectedOutput(File uniqueFile, String expectedOutput) throws IOException {
         String output = FileUtils.readFileToString(uniqueFile, "utf-8");
         uniqueFile.delete();
         String completeExpectedOutput = "{\"result\":\"ERROR\",\"message\":\"" + expectedOutput + "\"}";
-        assertEquals("Not the expected output file content",completeExpectedOutput,output);
+        assertEquals("Not the expected output file content", completeExpectedOutput, output);
     }
 
 
