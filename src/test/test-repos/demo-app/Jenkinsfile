@@ -5,7 +5,6 @@ pipeline {
         stage('Create marker') {
             steps {
                 echo 'Creating..'
-                # This is a workaround as these variables are not loaded properly
                 script {
                     env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
                     env.GIT_BRANCH = sh(returnStdout: true, script: 'git branch')
@@ -20,7 +19,6 @@ pipeline {
             steps {
                 echo 'Deploying....'
                 archive 'marker.txt'
-                sh 'cp marker.txt /test/data/'
             }
         }
     }
