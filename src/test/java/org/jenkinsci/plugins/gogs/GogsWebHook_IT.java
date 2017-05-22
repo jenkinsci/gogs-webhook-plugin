@@ -37,8 +37,6 @@ import static org.eclipse.jgit.lib.ConfigConstants.*;
 import static org.jenkinsci.plugins.gogs.JenkinsHandler.waitUntilJenkinsHasBeenStartedUp;
 import static org.junit.Assert.*;
 
-// to test: mvn clean pre-integration-test -P withIntegrationTest
-
 //FIXME: the test should run in sequence
 
 public class GogsWebHook_IT {
@@ -63,7 +61,7 @@ public class GogsWebHook_IT {
     };
 
     @Test
-    public void smokeTest() throws Exception {
+    public void smokeTest_build_masterBranch() throws Exception {
         GogsConfigHandler gogsServer = new GogsConfigHandler(GOGS_URL, GOGS_USER, GOGS_PASSWORD);
 
         gogsServer.waitForServer(5, 5);
@@ -183,6 +181,7 @@ public class GogsWebHook_IT {
         //Cleanup - remove the hook we created
         gogsServer.removeHook("demoApp", hookId);
     }
+
 
     /**
      * Loads the marker file of the last build (archived during the build)
