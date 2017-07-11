@@ -175,7 +175,7 @@
                                 </configuration>
                             </execution>
                             <execution>
-                                <id>stop-test-environmebt</id>
+                                <id>stop-test-environment</id>
                                 <phase>post-integration-test</phase>
                                 <goals>
                                     <goal>exec</goal>
