@@ -64,7 +64,7 @@ public class GogsWebHook_IT {
     public void smokeTest_build_masterBranch() throws Exception {
         GogsConfigHandler gogsServer = new GogsConfigHandler(GOGS_URL, GOGS_USER, GOGS_PASSWORD);
 
-        gogsServer.waitForServer(5, 5);
+        gogsServer.waitForServer(10, 5);
 
         //-------
 
