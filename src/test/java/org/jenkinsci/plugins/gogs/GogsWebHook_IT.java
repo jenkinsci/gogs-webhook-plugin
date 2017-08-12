@@ -62,11 +62,9 @@ public class GogsWebHook_IT {
 
     @Test
     public void smokeTest_build_masterBranch() throws Exception {
+        //Instantiate the Gogs Handler object and wait for the server to be available
         GogsConfigHandler gogsServer = new GogsConfigHandler(GOGS_URL, GOGS_USER, GOGS_PASSWORD);
-
-        gogsServer.waitForServer(10, 5);
-
-        //-------
+        gogsServer.waitForServer(12, 5);
 
         //Create the test repository on the server
         try {
@@ -148,17 +146,19 @@ public class GogsWebHook_IT {
         String buildedCommit = markerAsProperty.getProperty("GIT_COMMIT");
         assertEquals("Not the expected GIT commit", commit.getName(), buildedCommit);
 
+
+
         //add the trigger to Gogs
         File jsonCommandFile = new File(JSON_COMMANDFILE_PATH + "webHookDefinition.json");
         int hookId = gogsServer.createWebHook(jsonCommandFile, "testRep1");
         log.info("Created hook with ID " + hookId);
 
-        //change the source file
-        changeTheSourceFile("target/test-repos/demo-app/README.md");
-
         //Get what is the next build number of the test jenkins job
         jobAtIntitalState = jenkins.getJob(JENKINS_JOB_NAME);
         expectedBuildNbr = jobAtIntitalState.getNextBuildNumber();
+
+        //change the source file
+        changeTheSourceFile("target/test-repos/demo-app/README.md");
 
         //commit and push the changed file
         git.add().addFilepattern(".").call();
