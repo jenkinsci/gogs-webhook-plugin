@@ -161,6 +161,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             boolean foundJob = false;
 
             SecurityContext saveCtx = SecurityContextHolder.getContext();
+            String multibranchJob = jobName;
 
             try {
                 Jenkins jenkins = Jenkins.getActiveInstance();
@@ -179,9 +180,9 @@ public class GogsWebHook implements UnprotectedRootAction {
                 } else {
                     String ref = (String) jsonObject.get("ref");
                     String[] components = ref.split("/");
-                    ref = components[components.length - 1];
+                    multibranchJob = jobName + "/" + components[components.length - 1];
 
-                    job = GogsUtils.find(jobName + "/" + ref, Job.class);
+                    job = GogsUtils.find(multibranchJob, Job.class);
 
                     if (job != null) {
                         foundJob = true;
@@ -217,10 +218,10 @@ public class GogsWebHook implements UnprotectedRootAction {
                 LOGGER.warning(msg);
             } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
           /* No password is set in Jenkins and Gogs, run without secrets */
-                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+                result = payloadProcessor.triggerJobs(multibranchJob, gogsDelivery);
             } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
           /* Password is set in Jenkins and Gogs, and is correct */
-                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+                result = payloadProcessor.triggerJobs(multibranchJob, gogsDelivery);
             } else {
           /* Gogs and Jenkins secrets differs */
                 result.setStatus(403, "Incorrect secret");
