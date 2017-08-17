@@ -28,3 +28,5 @@ buildNumber.properties
 .mvn/timing.properties
 .idea/
 gogs-webhook.iml
+
+/src/test/docker/jenkins-dockerfile/gogs-webhook.hpi

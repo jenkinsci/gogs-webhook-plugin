@@ -242,8 +242,8 @@ public class GogsWebHook implements UnprotectedRootAction {
             LOGGER.warning(result.getMessage());
         }
         JSONObject json = new JSONObject();
-        json.put("result", result.getStatus() == 200 ? "OK" : "ERROR");
-        json.put("message", result.getMessage());
+        json.element("result", result.getStatus() == 200 ? "OK" : "ERROR");
+        json.element("message", result.getMessage());
         resp.setStatus(result.getStatus());
         resp.addHeader("Content-Type", "application/json");
         PrintWriter printer = resp.getWriter();
