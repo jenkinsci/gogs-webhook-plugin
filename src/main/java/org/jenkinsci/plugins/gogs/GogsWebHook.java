@@ -180,8 +180,8 @@ public class GogsWebHook implements UnprotectedRootAction {
                     String ref = (String) jsonObject.get("ref");
                     String[] components = ref.split("/");
                     ref = components[components.length - 1];
-
-                    job = GogsUtils.find(jobName + "/" + ref, Job.class);
+                    jobName = jobName + "/" + ref;
+                    job = GogsUtils.find(jobName, Job.class);
 
                     if (job != null) {
                         foundJob = true;
