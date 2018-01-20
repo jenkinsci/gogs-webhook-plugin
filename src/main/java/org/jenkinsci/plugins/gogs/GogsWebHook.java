@@ -147,15 +147,24 @@ public class GogsWebHook implements UnprotectedRootAction {
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
         if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
-            String contentType = req.getContentType();
+            JSONObject jsonObject = JSONObject.fromObject(body);
+            JSONObject commits = (JSONObject) jsonObject.getJSONArray("commits").get(0);
+            String message = (String) commits.get("message");
+
+            if (message.startsWith("[IGNORE]")) {
+                // Ignore commits starting with message "[IGNORE]"
+                result.setStatus(200, "Ignoring push");
+                exitWebHook(result, rsp);
+                return;
+            }
+
+                String contentType = req.getContentType();
             if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
                 body = URLDecoder.decode(body, DEFAULT_CHARSET);
             }
             if (body.startsWith("payload=")) {
                 body = body.substring(8);
             }
-
-            JSONObject jsonObject = JSONObject.fromObject(body);
 
             String jSecret = null;
             boolean foundJob = false;
@@ -171,7 +180,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
                 if (job != null) {
                     foundJob = true;
-                /* secret is stored in the properties of Job */
+                    /* secret is stored in the properties of Job */
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
                         jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
@@ -185,7 +194,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
                     if (job != null) {
                         foundJob = true;
-                    /* secret is stored in the properties of Job */
+                        /* secret is stored in the properties of Job */
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                         if (property != null) { /* only if Gogs secret is defined on the job */
                             jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
@@ -216,13 +225,13 @@ public class GogsWebHook implements UnprotectedRootAction {
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
             } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
-          /* No password is set in Jenkins and Gogs, run without secrets */
+                /* No password is set in Jenkins and Gogs, run without secrets */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
             } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
-          /* Password is set in Jenkins and Gogs, and is correct */
+                /* Password is set in Jenkins and Gogs, and is correct */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
             } else {
-          /* Gogs and Jenkins secrets differs */
+                /* Gogs and Jenkins secrets differs */
                 result.setStatus(403, "Incorrect secret");
             }
         } else {
