@@ -1,0 +1,10 @@
+{
+  "type":"gogs",
+  "config":
+    {
+      "url":"http://localhost:8080/job/demoapp/build?delay=0",
+      "content_type":"json"
+    },
+  "events":["create","push","pull_request"],
+  "active":true
+}

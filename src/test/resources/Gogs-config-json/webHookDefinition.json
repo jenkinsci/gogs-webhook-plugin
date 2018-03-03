@@ -1,0 +1,10 @@
+{
+  "type":"gogs",
+  "config":
+    {
+      "url":"http://jenkins:8080/job/test%20project/build?delay=0",
+      "content_type":"json"
+    },
+  "events":["create","push","pull_request"],
+  "active":true
+}

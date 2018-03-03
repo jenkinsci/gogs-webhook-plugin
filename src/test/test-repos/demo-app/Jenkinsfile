@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Create marker') {
+            steps {
+                echo 'Creating..'
+                script {
+                    env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    env.GIT_BRANCH = sh(returnStdout: true, script: 'git branch')
+                }
+                echo "Commit: ${env.GIT_COMMIT}"
+                echo "Branch: ${env.GIT_BRANCH}"
+                sh 'bash scripts/generate_marker.sh'
+                sh 'cat ./marker.txt'
+            }
+        }
+        stage('Deploy marker') {
+            steps {
+                echo 'Deploying....'
+                archive 'marker.txt'
+            }
+        }
+    }
+}

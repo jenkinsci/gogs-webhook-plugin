@@ -31,16 +31,23 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Alexander Verhaar
@@ -48,10 +55,8 @@ import java.util.logging.Logger;
 @Extension
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
-    public static final String URLNAME = "gogs-webhook";
+    static final String URLNAME = "gogs-webhook";
     private static final String DEFAULT_CHARSET = "UTF-8";
-    private Jenkins jenkins = Jenkins.getInstance();
-    private StaplerResponse resp;
 
     public String getDisplayName() {
         return null;
@@ -66,21 +71,42 @@ public class GogsWebHook implements UnprotectedRootAction {
     }
 
     /**
+     * encode sha256 hmac
+     *
+     * @param data data to hex
+     * @param key  key of HmacSHA256
+     * @return a String with the encoded sha256 hmac
+     * @throws Exception Something went wrong getting the sha256 hmac
+     */
+    public static String encode(String data, String key) throws Exception {
+        final Charset asciiCs = Charset.forName("UTF-8");
+        final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+        final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
+        sha256_HMAC.init(secret_key);
+        return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
+    }
+
+    /**
      * Receives the HTTP POST request send by Gogs.
      *
      * @param req request
+     * @param rsp response
+     * @throws IOException problem while parsing
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
         GogsResults result = new GogsResults();
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
 
-        this.resp = rsp;
+        //Check that we have something to process
+        checkNotNull(req, "Null request submitted to doIndex method");
+        checkNotNull(rsp, "Null reply submitted to doIndex method");
 
         // Get X-Gogs-Event
         String event = req.getHeader("X-Gogs-Event");
         if (!"push".equals(event)) {
             result.setStatus(403, "Only push event can be accepted.");
-            exitWebHook(result);
+            exitWebHook(result, rsp);
+            return;
         }
 
         // Get X-Gogs-Delivery header with deliveryID
@@ -91,18 +117,48 @@ public class GogsWebHook implements UnprotectedRootAction {
             gogsDelivery = "Gogs-ID: " + gogsDelivery;
         }
 
-        // Get querystring from the URI
-        Map querystring = splitQuery(req.getQueryString());
-        String jobName = querystring.get("job").toString();
-        if (jobName != null && jobName.isEmpty()) {
-            result.setStatus(404, "Parameter 'job' is missing or no value assigned.");
-            exitWebHook(result);
+        // Get X-Gogs-Signature
+        String gogsSignature = req.getHeader("X-Gogs-Signature");
+        if (gogsSignature == null || gogsSignature.isEmpty()) {
+            gogsSignature = null;
+        }
+
+
+        // Get queryStringMap from the URI
+        String queryString = checkNotNull(req.getQueryString(), "The queryString in the request is null");
+        Map queryStringMap = checkNotNull(splitQuery(queryString), "Null queryStringMap");
+
+        //Do we have the job name parameter ?
+        if (!queryStringMap.containsKey("job")) {
+            result.setStatus(404, "Parameter 'job' is missing.");
+            exitWebHook(result, rsp);
+            return;
+        }
+        Object jobObject = queryStringMap.get("job");
+        String jobName;
+        if (jobObject == null) {
+            result.setStatus(404, "No value assigned to parameter 'job'");
+            exitWebHook(result, rsp);
+            return;
+        } else {
+            jobName = jobObject.toString();
         }
 
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
         if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
-            String contentType = req.getContentType();
+            JSONObject jsonObject = JSONObject.fromObject(body);
+            JSONObject commits = (JSONObject) jsonObject.getJSONArray("commits").get(0);
+            String message = (String) commits.get("message");
+
+            if (message.startsWith("[IGNORE]")) {
+                // Ignore commits starting with message "[IGNORE]"
+                result.setStatus(200, "Ignoring push");
+                exitWebHook(result, rsp);
+                return;
+            }
+
+                String contentType = req.getContentType();
             if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
                 body = URLDecoder.decode(body, DEFAULT_CHARSET);
             }
@@ -110,33 +166,57 @@ public class GogsWebHook implements UnprotectedRootAction {
                 body = body.substring(8);
             }
 
-            JSONObject jsonObject = JSONObject.fromObject(body);
-            String gSecret = jsonObject.getString("secret");            /* Secret provided by Gogs    */
-            payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
-            payloadProcessor.setPayload("before",jsonObject.getString("before"));
-
-            String jSecret = null;                                      /* secret is stored in the properties of Job */
+            String jSecret = null;
             boolean foundJob = false;
 
             SecurityContext saveCtx = SecurityContextHolder.getContext();
 
             try {
+                Jenkins jenkins = Jenkins.getActiveInstance();
                 ACL acl = jenkins.getACL();
                 acl.impersonate(ACL.SYSTEM);
 
-                for (Job job : jenkins.getAllItems(Job.class)) {
-                    foundJob = job.getName().equals(jobName);
-                    if (foundJob) {
+                Job job = GogsUtils.find(jobName, Job.class);
+
+                if (job != null) {
+                    foundJob = true;
+                    /* secret is stored in the properties of Job */
+                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                    if (property != null) { /* only if Gogs secret is defined on the job */
+                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                    }
+                } else {
+                    String ref = (String) jsonObject.get("ref");
+                    String[] components = ref.split("/");
+                    ref = components[components.length - 1];
+
+                    job = GogsUtils.find(jobName + "/" + ref, Job.class);
+
+                    if (job != null) {
+                        foundJob = true;
+                        /* secret is stored in the properties of Job */
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                        if (property != null) {                         /* only if Gogs secret is defined on the job */
-                            jSecret = property.getGogsSecret();         /* Secret provided by Jenkins */
+                        if (property != null) { /* only if Gogs secret is defined on the job */
+                            jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
                         }
-                        /* no need to go through all other jobs */
-                        break;
                     }
                 }
             } finally {
                 SecurityContextHolder.setContext(saveCtx);
+            }
+
+            String gSecret = null;
+            if (gogsSignature == null) {
+                gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
+            } else {
+                try {
+                    if (gogsSignature.equals(encode(body, jSecret))) {
+                        gSecret = jSecret;
+                        // now hex is right, continue to old logic
+                    }
+                } catch (Exception e) {
+                    LOGGER.warning(e.getMessage());
+                }
             }
 
             if (!foundJob) {
@@ -157,7 +237,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             result.setStatus(404, "No payload or URI contains invalid entries.");
         }
 
-        exitWebHook(result);
+        exitWebHook(result, rsp);
     }
 
     /**
@@ -165,16 +245,17 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param result GogsResults
      */
-    private void exitWebHook(GogsResults result) throws IOException {
+    private void exitWebHook(GogsResults result, StaplerResponse resp) throws IOException {
         if (result.getStatus() != 200) {
             LOGGER.warning(result.getMessage());
         }
         JSONObject json = new JSONObject();
-        json.put("result", result.getStatus() == 200 ? "OK" : "ERROR");
-        json.put("message", result.getMessage());
+        json.element("result", result.getStatus() == 200 ? "OK" : "ERROR");
+        json.element("message", result.getMessage());
         resp.setStatus(result.getStatus());
         resp.addHeader("Content-Type", "application/json");
-        resp.getWriter().print(json.toString());
+        PrintWriter printer = resp.getWriter();
+        printer.print(json.toString());
     }
 
     /**

@@ -31,33 +31,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.scm.SCM;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import jenkins.model.Jenkins;
-
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 
+import java.util.logging.Logger;
+
 public class GogsPayloadProcessor {
-    private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
-    private Map<String, String> payload = new HashMap<String, String>();
+  private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
+  private Map<String, String> payload = new HashMap<String, String>();
 
-    public GogsPayloadProcessor() {
-    }
+  public GogsPayloadProcessor() {
+  }
 
-    public Map<String, String> getPayload() {
-        return this.payload;
-    }
+  public Map<String, String> getPayload() {
+      return this.payload;
+  }
 
-    public void setPayload(String k, String v) {
-        this.payload.put(k, v);
-    }
+  public void setPayload(String k, String v) {
+      this.payload.put(k, v);
+  }
 
     public GogsResults triggerJobs(String jobName, String deliveryID) {
         SecurityContext saveCtx = null;
