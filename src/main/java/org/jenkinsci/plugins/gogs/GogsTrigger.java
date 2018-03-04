@@ -2,12 +2,12 @@ package org.jenkinsci.plugins.gogs;
 
 
 import hudson.Extension;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.SequentialExecutionQueue;
+import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.triggers.SCMTriggerItem;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -15,7 +15,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.util.logging.Logger;
 
 
-public class GogsTrigger extends Trigger<Job<?,?>> {
+@SuppressWarnings("ALL")
+public class GogsTrigger extends Trigger<Job<?, ?>> {
 
     @DataBoundConstructor
     public GogsTrigger() {
@@ -27,7 +28,6 @@ public class GogsTrigger extends Trigger<Job<?,?>> {
     }
 
     public void onPost(String triggeredByUser, final String payload) {
-        final String pushBy = triggeredByUser;
         getDescriptor().queue.execute(new Runnable() {
 
             @Override
@@ -39,12 +39,12 @@ public class GogsTrigger extends Trigger<Job<?,?>> {
 
     @Override
     public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     @Extension
     public static class DescriptorImpl extends TriggerDescriptor {
-        private transient final SequentialExecutionQueue queue = new SequentialExecutionQueue(Hudson.MasterComputer.threadPoolForRemoting);
+        private transient final SequentialExecutionQueue queue = new SequentialExecutionQueue(Jenkins.MasterComputer.threadPoolForRemoting);
 
         @Override
         public boolean isApplicable(Item item) {

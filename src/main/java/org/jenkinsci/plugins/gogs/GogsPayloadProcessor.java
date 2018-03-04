@@ -23,17 +23,8 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
-import hudson.scm.SCM;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import jenkins.model.Jenkins;
@@ -42,35 +33,36 @@ import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
-public class GogsPayloadProcessor {
-  private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
-  private Map<String, String> payload = new HashMap<String, String>();
+class GogsPayloadProcessor {
+    private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
+    private final Map<String, String> payload = new HashMap<>();
 
-  public GogsPayloadProcessor() {
-  }
+    GogsPayloadProcessor() {
+    }
 
-  public Map<String, String> getPayload() {
-      return this.payload;
-  }
+    @SuppressWarnings("unused")
+    public Map<String, String> getPayload() {
+        return this.payload;
+    }
 
-  public void setPayload(String k, String v) {
-      this.payload.put(k, v);
-  }
+    public void setPayload(String k, String v) {
+        this.payload.put(k, v);
+    }
 
     public GogsResults triggerJobs(String jobName, String deliveryID) {
-        SecurityContext saveCtx = null;
+        SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
         Boolean didJob = false;
         GogsResults result = new GogsResults();
 
         try {
-            saveCtx = SecurityContextHolder.getContext();
-
             Jenkins instance = Jenkins.getInstance();
             if (instance != null) {
-                ACL acl = instance.getACL();
-                acl.impersonate(ACL.SYSTEM);
                 for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
                     if (project.getName().equals(jobName)) {
 

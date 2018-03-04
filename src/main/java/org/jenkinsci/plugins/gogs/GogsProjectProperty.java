@@ -27,14 +27,13 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
-
 import net.sf.json.JSONObject;
-
-import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.logging.Logger;
 
+@SuppressWarnings("ALL")
 public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
     private final String gogsSecret;
     private final boolean gogsUsePayload;
@@ -69,14 +68,14 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
             return gogsUsePayload;
         }
 
-        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) {
             GogsProjectProperty tpp = req.bindJSON(
                     GogsProjectProperty.class,
                     formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
             );
             if (tpp != null) {
-                LOGGER.info(formData.toString());
-                LOGGER.info(tpp.gogsSecret);
+                LOGGER.finest(formData.toString());
+                LOGGER.finest(tpp.gogsSecret);
 
                 gogsSecret = tpp.gogsSecret;
             }

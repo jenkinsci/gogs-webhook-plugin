@@ -27,7 +27,6 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
-import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -78,7 +77,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @return a String with the encoded sha256 hmac
      * @throws Exception Something went wrong getting the sha256 hmac
      */
-    public static String encode(String data, String key) throws Exception {
+    private static String encode(String data, String key) throws Exception {
         final Charset asciiCs = Charset.forName("UTF-8");
         final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
         final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
@@ -158,7 +157,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                 return;
             }
 
-                String contentType = req.getContentType();
+            String contentType = req.getContentType();
             if (contentType != null && contentType.startsWith("application/x-www-form-urlencoded")) {
                 body = URLDecoder.decode(body, DEFAULT_CHARSET);
             }
@@ -168,14 +167,12 @@ public class GogsWebHook implements UnprotectedRootAction {
 
             String jSecret = null;
             boolean foundJob = false;
+            payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
+            payloadProcessor.setPayload("before", jsonObject.getString("before"));
 
-            SecurityContext saveCtx = SecurityContextHolder.getContext();
+            SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
 
             try {
-                Jenkins jenkins = Jenkins.getActiveInstance();
-                ACL acl = jenkins.getACL();
-                acl.impersonate(ACL.SYSTEM);
-
                 Job job = GogsUtils.find(jobName, Job.class);
 
                 if (job != null) {
@@ -249,6 +246,7 @@ public class GogsWebHook implements UnprotectedRootAction {
         if (result.getStatus() != 200) {
             LOGGER.warning(result.getMessage());
         }
+        //noinspection MismatchedQueryAndUpdateOfCollection
         JSONObject json = new JSONObject();
         json.element("result", result.getStatus() == 200 ? "OK" : "ERROR");
         json.element("message", result.getMessage());
@@ -265,7 +263,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @return returns map from querystring
      */
     private static Map<String, String> splitQuery(String qs) throws UnsupportedEncodingException {
-        final Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+        final Map<String, String> query_pairs = new LinkedHashMap<>();
         final String[] pairs = qs.split("&");
         for (String pair : pairs) {
             final int idx = pair.indexOf("=");
