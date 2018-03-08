@@ -1,3 +1,5 @@
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/gogs-webhook-plugin/master)](https://ci.jenkins.io/blue/organizations/jenkins/Plugins%2Fgogs-webhook-plugin/activity/)
+
 Gogs-Webhook Plugin
 ===================
 
