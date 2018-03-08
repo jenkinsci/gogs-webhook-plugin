@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Extension
+@SuppressWarnings("unused")
 public class GogsWebHookCrumbExclusion extends CrumbExclusion {
 
     @Override
