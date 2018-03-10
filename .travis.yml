@@ -12,3 +12,4 @@ install:
 script:
 - mvn clean pre-integration-test -P withIntegrationTest
 - mvn failsafe:integration-test -P withIntegrationTest
+
