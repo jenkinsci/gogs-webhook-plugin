@@ -1,4 +1,4 @@
-[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/gogs-webhook-plugin/master)](https://ci.jenkins.io/blue/organizations/jenkins/Plugins%2Fgogs-webhook-plugin/activity/)
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/gogs-webhook-plugin/master)](https://ci.jenkins.io/blue/organizations/jenkins/Plugins%2Fgogs-webhook-plugin/activity/) [![Build Status](https://travis-ci.org/jenkinsci/gogs-webhook-plugin.svg?branch=master)](https://travis-ci.org/jenkinsci/gogs-webhook-plugin)
 
 Gogs-Webhook Plugin
 ===================
