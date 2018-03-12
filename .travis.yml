@@ -13,5 +13,4 @@ install:
 - pip install -U pip
 script:
 - mvn clean pre-integration-test -P withIntegrationTest
-- cd /home/travis/build/jenkinsci/gogs-webhook-plugin && mvn failsafe:integration-test -P withIntegrationTest
-- find /home/travis/build/jenkinsci/gogs-webhook-plugin -name "test-project.xml"
+- mvn failsafe:integration-test -P withIntegrationTest
