@@ -35,7 +35,8 @@ import java.util.concurrent.TimeoutException;
 
 import static org.eclipse.jgit.lib.ConfigConstants.*;
 import static org.jenkinsci.plugins.gogs.JenkinsHandler.waitUntilJenkinsHasBeenStartedUp;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 //FIXME: the test should run in sequence
 
@@ -48,7 +49,7 @@ public class GogsWebHook_IT {
     public static final String GOGS_PASSWORD = "butler";
     public static final String WEBHOOK_URL = "http://localhost:8080/job/testRep1/build?delay=0";
     public static final String JSON_COMMANDFILE_PATH = "target/test-classes/Gogs-config-json/";
-    public static final String JENKINS_CONFIGS_PATH = "target/test-classes/jenkins-config/";
+    public static final String JENKINS_CONFIGS_PATH = "target/test-classes/Jenkins-config/";
     public static final String JENKINS_JOB_NAME = "test project";
     final Logger log = LoggerFactory.getLogger(GogsWebHook_IT.class);
 
@@ -117,12 +118,11 @@ public class GogsWebHook_IT {
         waitUntilJenkinsHasBeenStartedUp(jenkins);
 
 
-
         //Check if the job exist. If not create it.
         Job job = jenkins.getJob(JENKINS_JOB_NAME);
         if (job == null) {
             //Read the job configuration into a string
-            File jenkinsConfigFile = new File(JENKINS_CONFIGS_PATH +"test-project.xml");
+            File jenkinsConfigFile = new File(JENKINS_CONFIGS_PATH + "test-project.xml");
             byte[] encoded = Files.readAllBytes(jenkinsConfigFile.toPath());
             String configXml = new String(encoded, Charset.defaultCharset());
 
@@ -145,7 +145,6 @@ public class GogsWebHook_IT {
         Properties markerAsProperty = loadMarkerArtifactAsProperty(jenkins);
         String buildedCommit = markerAsProperty.getProperty("GIT_COMMIT");
         assertEquals("Not the expected GIT commit", commit.getName(), buildedCommit);
-
 
 
         //add the trigger to Gogs

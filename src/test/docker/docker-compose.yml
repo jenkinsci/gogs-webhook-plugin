@@ -3,7 +3,7 @@ version: '2'
 services:
 
   jenkins:
-    build: ./jenkins-Dockerfile
+    build: ./jenkins-dockerfile
     container_name: jenkins
     environment:
       - JENKINS_OPTS=--httpPort=8080

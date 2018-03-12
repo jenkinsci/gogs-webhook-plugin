@@ -1,0 +1,15 @@
+language: python
+python: '2.7'
+sudo: required
+env:
+- PYTHONUNBUFFERED=1
+services:
+- docker
+cache:
+  directories:
+  - .autoconf
+  - $HOME/.m2
+install:
+- pip install -U pip
+script:
+- mvn clean pre-integration-test -P withIntegrationTest && mvn failsafe:integration-test -P withIntegrationTest
