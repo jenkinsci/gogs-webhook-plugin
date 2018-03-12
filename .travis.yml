@@ -12,5 +12,4 @@ cache:
 install:
 - pip install -U pip
 script:
-- mvn clean pre-integration-test -P withIntegrationTest
-- mvn failsafe:integration-test -P withIntegrationTest
+- mvn clean pre-integration-test -P withIntegrationTest && mvn failsafe:integration-test -P withIntegrationTest
