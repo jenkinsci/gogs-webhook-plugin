@@ -27,7 +27,6 @@ import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
-import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
@@ -46,59 +45,45 @@ class GogsPayloadProcessor {
     GogsPayloadProcessor() {
     }
 
-    @SuppressWarnings("unused")
-    public Map<String, String> getPayload() {
-        return this.payload;
-    }
-
     public void setPayload(String k, String v) {
         this.payload.put(k, v);
     }
 
     public GogsResults triggerJobs(String jobName, String deliveryID) {
         SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
-        Boolean didJob = false;
         GogsResults result = new GogsResults();
 
         try {
-            Jenkins instance = Jenkins.getInstance();
-            if (instance != null) {
-                for (BuildableItem project : instance.getAllItems(BuildableItem.class)) {
-                    if (project.getName().equals(jobName)) {
+            BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
+            if (project != null) {
+                GogsTrigger gTrigger = null;
+                Cause cause = new GogsCause(deliveryID);
 
-                        GogsTrigger gTrigger = null;
-                        Cause cause = new GogsCause(deliveryID);
-
-                        if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
-                            ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
-                            for (Trigger trigger : pJob.getTriggers().values()) {
-                                if (trigger instanceof GogsTrigger) {
-                                    gTrigger = (GogsTrigger) trigger;
-                                    break;
-                                }
-                            }
+                if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
+                    ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
+                    for (Trigger trigger : pJob.getTriggers().values()) {
+                        if (trigger instanceof GogsTrigger) {
+                            gTrigger = (GogsTrigger) trigger;
+                            break;
                         }
-                        if (gTrigger != null) {
-                            SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                            GogsPayload gogsPayload = new GogsPayload(this.payload);
-
-                            if (item != null)
-                                item.scheduleBuild2(0, gogsPayload);
-                        } else
-                            project.scheduleBuild(0, cause);
-
-                        didJob = true;
-                        result.setMessage(String.format("Job '%s' is executed", jobName));
                     }
                 }
-                if (!didJob) {
-                    String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
-                    result.setStatus(404, msg);
-                    LOGGER.warning(msg);
+
+                if (gTrigger != null) {
+                    SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                    GogsPayload gogsPayload = new GogsPayload(this.payload);
+                    if (item != null) {
+                        item.scheduleBuild2(0, gogsPayload);
+                    }
+                } else {
+                    project.scheduleBuild(0, cause);
                 }
+                result.setMessage(String.format("Job '%s' is executed", jobName));
+            } else {
+                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                result.setStatus(404, msg);
+                LOGGER.warning(msg);
             }
-        } catch (RuntimeException e) {
-            throw e;
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
