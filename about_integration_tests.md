@@ -56,7 +56,7 @@ Note that either for Jenkins and Gogs, the test is based on the LATEST version (
 
 #### The Jenkins Docker Image
 
-The Jenkins container image is built from the `jenkinsci/jenkins:latest` image. The necessary dependencies for the Gogs Webhook plugin under test are installed using the built-in `install-plugins.sh` script (git, workflow-aggregator, pipeline-model-extensions).
+The Jenkins container image is built from the `jenkinsci/jenkins:latest` image. The necessary dependencies for the Gogs Webhook plugin under test are installed using the built-in `install-plugins.sh` script (git, workflow-aggregator, pipeline-model-extensions, cloudbees-folder).
 The previously built plugin hpi is copied in the container so that it will automatically be loaded at startup.
 The password credential for Gogs is loaded in the Jenkins container with the `setup-gogs-user-credentials.groovy.override` groovy script (executed at startup).
 It is hardcoded in the script to user "butler" with password "butler". 
