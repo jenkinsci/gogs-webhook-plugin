@@ -16,6 +16,9 @@ Example how your the webhook in Gogs should look like:
 This project has some integration tests available. For more details see the [dedicated readme](about_integration_tests.md).
 
 ### Change Log
+#### Version 1.0.13 (Mar 16, 2018)
+- Fixes `job not found` if folders are used [[GH_ISSUE#36](https://github.com/jenkinsci/gogs-webhook-plugin/issues/36)/[PR#37](https://github.com/jenkinsci/gogs-webhook-plugin/pull/37)].
+
 #### Version 1.0.12 (Mar 8, 2018)
 - Expose REF and BEFORE payload to environment variables (GOGS_REF and GOGS_BEFORE) 
 
