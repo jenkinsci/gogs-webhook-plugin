@@ -55,35 +55,26 @@ class GogsPayloadProcessor {
 
         try {
             BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
-            if (project != null) {
-                GogsTrigger gTrigger = null;
-                Cause cause = new GogsCause(deliveryID);
-
-                if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
-                    ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
-                    for (Trigger trigger : pJob.getTriggers().values()) {
-                        if (trigger instanceof GogsTrigger) {
-                            gTrigger = (GogsTrigger) trigger;
-                            break;
-                        }
-                    }
-                }
-
-                if (gTrigger != null) {
-                    SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                    GogsPayload gogsPayload = new GogsPayload(this.payload);
-                    if (item != null) {
-                        item.scheduleBuild2(0, gogsPayload);
-                    }
-                } else {
-                    project.scheduleBuild(0, cause);
-                }
-                result.setMessage(String.format("Job '%s' is executed", jobName));
-            } else {
+            if (project == null) {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
+                return result;
             }
+
+            GogsTrigger gTrigger = getTrigger(project);
+            Cause cause = new GogsCause(deliveryID);
+
+            if (gTrigger != null) {
+                SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                GogsPayload gogsPayload = new GogsPayload(this.payload);
+                if (item != null) {
+                    item.scheduleBuild2(0, gogsPayload);
+                }
+            } else {
+                project.scheduleBuild(0, cause);
+            }
+            result.setMessage(String.format("Job '%s' is executed", jobName));
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -94,5 +85,17 @@ class GogsPayloadProcessor {
         }
 
         return result;
+    }
+
+    private GogsTrigger getTrigger(BuildableItem project) {
+        if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
+            ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
+            for (Trigger trigger : pJob.getTriggers().values()) {
+                if (trigger instanceof GogsTrigger) {
+                    return (GogsTrigger) trigger;
+                }
+            }
+        }
+        return null;
     }
 }

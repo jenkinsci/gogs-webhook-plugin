@@ -232,6 +232,17 @@ public class GogsWebHookTest {
         log.info("Test succeeded.");
     }
 
+    @Test
+    public void testGogsResults() throws Exception {
+        final String MSG = "TestMessage";
+        GogsResults results = new GogsResults();
+
+        assertEquals("Didn't get standard 200 status value", 200, results.getStatus());
+        results.setStatus(404, MSG);
+        assertEquals("Didn't get the expected 404 status", 404, results.getStatus());
+        assertEquals("Didn't get the expected results", MSG, results.getMessage());
+    }
+
     //
     // Helper methods
     //
