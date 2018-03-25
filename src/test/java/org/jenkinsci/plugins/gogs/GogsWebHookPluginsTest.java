@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 /*
  *  Class to test gogs webhook in cooperation with other plugins
@@ -36,12 +35,6 @@ public class GogsWebHookPluginsTest {
 
         Job job = GogsUtils.find(FOLDERNAME + "/" + PROJECTNAME, Job.class);
         assertEquals("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, project);
-
-        job = GogsUtils.find(PROJECTNAME, Job.class);
-        assertEquals("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, project);
-
-        job = GogsUtils.find("blabla", Job.class);
-        assertNotEquals("Project found but this is not expected", "blabla", project);
         project.scheduleBuild(0, cause);
     }
 

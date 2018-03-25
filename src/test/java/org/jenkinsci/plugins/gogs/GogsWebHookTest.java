@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.gogs;
 
+import hudson.model.FreeStyleProject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
@@ -8,6 +9,7 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.kohsuke.stapler.RequestImpl;
 import org.kohsuke.stapler.ResponseImpl;
 import org.kohsuke.stapler.StaplerRequest;
@@ -30,6 +32,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class GogsWebHookTest {
+    private final String FOLDERNAME = "testFolder";
+    private final String PROJECTNAME = "testProject";
+    private final String DELIVERYID = "0123456789";
     final Logger log = LoggerFactory.getLogger(GogsWebHookTest.class);
 
     @Rule
@@ -39,6 +44,9 @@ public class GogsWebHookTest {
                     .getMethodName());
         }
     };
+
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
     @Before
     public void setUp() {
@@ -243,10 +251,32 @@ public class GogsWebHookTest {
         assertEquals("Didn't get the expected results", MSG, results.getMessage());
     }
 
+    @Test
+    public void testGogsPayloadProcessor() throws Exception {
+        FreeStyleProject project = j.createProject(FreeStyleProject.class, PROJECTNAME);
+        GogsTrigger gogsTrigger = new GogsTrigger();
+
+        GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+
+        // Trigger job without GogsTrigger
+        GogsResults gogsResults = payloadProcessor.triggerJobs(PROJECTNAME, DELIVERYID);
+        assertEquals("Job not found", 200, gogsResults.getStatus());
+        assertEquals("Job not found", "Job '" + PROJECTNAME + "' is executed", gogsResults.getMessage());
+
+        // Trigger job with GogsTrigger
+        project.addTrigger(gogsTrigger);
+        gogsResults = payloadProcessor.triggerJobs(PROJECTNAME, DELIVERYID);
+        assertEquals("Job not found", 200, gogsResults.getStatus());
+        assertEquals("Job not found", "Job '" + PROJECTNAME + "' is executed", gogsResults.getMessage());
+
+        // Trigger job which isn't created
+        gogsResults = payloadProcessor.triggerJobs(PROJECTNAME + "notFound", DELIVERYID);
+        assertEquals("Job found", 404, gogsResults.getStatus());
+    }
+
     //
     // Helper methods
     //
-
 
     private void performDoIndexTest(StaplerRequest staplerRequest, StaplerResponse staplerResponse, File file) throws IOException {
         PrintWriter printWriter = new PrintWriter(file.getAbsoluteFile(), "UTF-8");
