@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 /*
  *  Class to test gogs webhook in cooperation with other plugins
@@ -19,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 public class GogsWebHookPluginsTest {
     private final String FOLDERNAME = "testFolder";
     private final String PROJECTNAME = "testProject";
+    private final String DELIVERYID = "0123456789";
 
     final Logger log = LoggerFactory.getLogger(GogsWebHookPluginsTest.class);
 
@@ -27,12 +29,20 @@ public class GogsWebHookPluginsTest {
 
     @Test
     public void testCloudBeesFolder() throws Exception {
+        GogsCause cause = new GogsCause(DELIVERYID);
         Folder folder = createFolder(FOLDERNAME);
 
         FreeStyleProject project = folder.createProject(FreeStyleProject.class, PROJECTNAME);
 
         Job job = GogsUtils.find(FOLDERNAME + "/" + PROJECTNAME, Job.class);
         assertEquals("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, project);
+
+        job = GogsUtils.find(PROJECTNAME, Job.class);
+        assertEquals("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, project);
+
+        job = GogsUtils.find("blabla", Job.class);
+        assertNotEquals("Project found but this is not expected", "blabla", project);
+        project.scheduleBuild(0, cause);
     }
 
     //
