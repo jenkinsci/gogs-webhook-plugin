@@ -42,7 +42,9 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -185,7 +187,13 @@ public class GogsWebHook implements UnprotectedRootAction {
                 } else {
                     String ref = (String) jsonObject.get("ref");
                     String[] components = ref.split("/");
-                    ref = components[components.length - 1];
+                    if (components.length > 3) {
+                        /* refs contains branch/tag with a slash */
+                        List<String> test = Arrays.asList(ref.split("/"));
+                        ref = String.join("%2F", test.subList(2, test.size()));
+                    } else {
+                        ref = components[components.length - 1];
+                    }
 
                     job = GogsUtils.find(jobName + "/" + ref, Job.class);
 
