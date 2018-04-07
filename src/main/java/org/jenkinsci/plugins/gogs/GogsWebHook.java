@@ -43,8 +43,8 @@ import java.io.PrintWriter;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
@@ -177,15 +177,10 @@ public class GogsWebHook implements UnprotectedRootAction {
             SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
 
             try {
-                String ref = (String) jsonObject.get("ref");
-                String[] components = ref.split("/");
-                if (components.length > 3) {
-                    /* refs contains branch/tag with a slash */
-                    List<String> test = Arrays.asList(ref.split("/"));
-                    ref = String.join("%2F", test.subList(2, test.size()));
-                } else {
-                    ref = components[components.length - 1];
-                }
+                StringJoiner stringJoiner = new StringJoiner("%2F");
+                Pattern.compile("/").splitAsStream((String) jsonObject.get("ref")).skip(2)
+                        .forEach(stringJoiner::add);
+                String ref = stringJoiner.toString();
 
                 Arrays.asList(jobName, jobName + "/" + ref).forEach(j -> {
                     Job job = GogsUtils.find(j, Job.class);
@@ -223,7 +218,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             } else if (isNullOrEmpty(jSecret.get()) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
-            } else if (!isNullOrEmpty(jSecret.get()) && jSecret.equals(gSecret)) {
+            } else if (!isNullOrEmpty(jSecret.get()) && jSecret.get().equals(gSecret)) {
                 /* Password is set in Jenkins and Gogs, and is correct */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
             } else {
