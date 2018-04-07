@@ -7,7 +7,7 @@ class GogsUtils {
 
     private GogsUtils() {
     }
-    
+
     /**
      * Search in Jenkins for a item with type T based on the job name
      *
@@ -21,7 +21,7 @@ class GogsUtils {
         if (item == null) {
             // not found in a direct search, search in all items since the item might be in a folder but given without folder structure
             // (to keep it backwards compatible)
-            item = jenkins.getAllItems(type).stream().filter(i -> i.getName().equals(jobName)).findFirst().get();
+            item = jenkins.getAllItems(type).stream().filter(i -> i.getName().equals(jobName)).findFirst().orElse(null);
         }
         return item;
     }

@@ -35,6 +35,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 class GogsPayloadProcessor {
@@ -49,35 +51,32 @@ class GogsPayloadProcessor {
     }
 
     public GogsResults triggerJobs(String jobName, String deliveryID) {
+        AtomicBoolean jobdone = new AtomicBoolean(false);
         SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
         GogsResults result = new GogsResults();
 
         try {
             BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
             if (project != null) {
-                GogsTrigger gTrigger = null;
                 Cause cause = new GogsCause(deliveryID);
 
                 if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
                     ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
-                    gTrigger = (GogsTrigger) pJob.getTriggers().values().stream()
-                            .filter(trigger1 -> trigger1 instanceof GogsTrigger).findFirst().get();
+                    pJob.getTriggers().values().stream()
+                            .filter(trigger1 -> trigger1 instanceof GogsTrigger).findFirst()
+                            .ifPresent((g) -> {
+                                GogsPayload gogsPayload = new GogsPayload(this.payload);
+                                Optional.ofNullable(SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project))
+                                        .ifPresent((item) -> {
+                                            item.scheduleBuild2(0, gogsPayload);
+                                            jobdone.set(true);
+                                        });
+                            });
                 }
-
-                if (gTrigger != null) {
-                    SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                    GogsPayload gogsPayload = new GogsPayload(this.payload);
-                    if (item != null) {
-                        item.scheduleBuild2(0, gogsPayload);
-                    }
-                } else {
+                if (!jobdone.get()) {
                     project.scheduleBuild(0, cause);
+                    jobdone.set(true);
                 }
-                result.setMessage(String.format("Job '%s' is executed", jobName));
-            } else {
-                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
-                result.setStatus(404, msg);
-                LOGGER.warning(msg);
             }
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
@@ -85,6 +84,13 @@ class GogsPayloadProcessor {
             e.printStackTrace(pw);
             LOGGER.severe(sw.toString());
         } finally {
+            if (jobdone.get()) {
+                result.setMessage(String.format("Job '%s' is executed", jobName));
+            } else {
+                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                result.setStatus(404, msg);
+                LOGGER.warning(msg);
+            }
             SecurityContextHolder.setContext(saveCtx);
         }
 
