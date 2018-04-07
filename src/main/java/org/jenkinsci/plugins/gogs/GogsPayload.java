@@ -25,10 +25,7 @@ class GogsPayload extends InvisibleAction implements EnvironmentContributingActi
     @Override
     public void buildEnvVars(AbstractBuild<?, ?> abstractBuild, EnvVars envVars) {
         LOGGER.log(Level.FINEST, "Injecting GOGS_PAYLOAD: {0}", getPayload());
-        for (Map.Entry<String, String> entry : payload.entrySet()) {
-            envVars.put("GOGS_" + entry.getKey().toUpperCase(), entry.getValue());
-        }
-
+        payload.forEach((key, value) -> envVars.put("GOGS_" + key.toUpperCase(), value));
     }
 
     private static final Logger LOGGER = Logger.getLogger(GogsPayload.class.getName());
