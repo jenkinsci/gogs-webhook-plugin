@@ -40,16 +40,17 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 /**
  * @author Alexander Verhaar
@@ -114,7 +115,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // Get X-Gogs-Delivery header with deliveryID
         String gogsDelivery = req.getHeader("X-Gogs-Delivery");
-        if (gogsDelivery == null || gogsDelivery.isEmpty()) {
+        if (isNullOrEmpty(gogsDelivery)) {
             gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
         } else {
             gogsDelivery = "Gogs-ID: " + gogsDelivery;
@@ -122,7 +123,7 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // Get X-Gogs-Signature
         String gogsSignature = req.getHeader("X-Gogs-Signature");
-        if (gogsSignature == null || gogsSignature.isEmpty()) {
+        if (isNullOrEmpty(gogsSignature)) {
             gogsSignature = null;
         }
 
@@ -137,14 +138,11 @@ public class GogsWebHook implements UnprotectedRootAction {
             exitWebHook(result, rsp);
             return;
         }
-        Object jobObject = queryStringMap.get("job");
-        String jobName;
-        if (jobObject == null) {
+        String jobName = queryStringMap.get("job").toString();
+        if (isNullOrEmpty(jobName)) {
             result.setStatus(404, "No value assigned to parameter 'job'");
             exitWebHook(result, rsp);
             return;
-        } else {
-            jobName = jobObject.toString();
         }
 
         // Get the POST stream
@@ -272,20 +270,10 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @param qs Querystring
      * @return returns map from querystring
      */
-    private static Map<String, String> splitQuery(String qs) throws UnsupportedEncodingException {
-        final Map<String, String> query_pairs = new LinkedHashMap<>();
-        final String[] pairs = qs.split("&");
-        for (String pair : pairs) {
-            final int idx = pair.indexOf("=");
-            final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), DEFAULT_CHARSET) : pair;
-            final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), DEFAULT_CHARSET) : null;
-            query_pairs.put(key, value);
-        }
-        return query_pairs;
-    }
-
-    private boolean isNullOrEmpty(String s) {
-        return s == null || s.trim().isEmpty();
+    private static Map<String, String> splitQuery(String qs) {
+        return Pattern.compile("&").splitAsStream(qs)
+                .map(p -> p.split("="))
+                .collect(Collectors.toMap(a -> a[0], a -> a.length > 1 ? a[1] : ""));
     }
 }
 
