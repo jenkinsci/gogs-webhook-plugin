@@ -45,6 +45,8 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -167,45 +169,35 @@ public class GogsWebHook implements UnprotectedRootAction {
                 body = body.substring(8);
             }
 
-            String jSecret = null;
-            boolean foundJob = false;
+            AtomicReference<String> jSecret = new AtomicReference<>(null);
+            AtomicBoolean foundJob = new AtomicBoolean(false);
             payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
             payloadProcessor.setPayload("before", jsonObject.getString("before"));
 
             SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
 
             try {
-                Job job = GogsUtils.find(jobName, Job.class);
-
-                if (job != null) {
-                    foundJob = true;
-                    /* secret is stored in the properties of Job */
-                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                    if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                    }
+                String ref = (String) jsonObject.get("ref");
+                String[] components = ref.split("/");
+                if (components.length > 3) {
+                    /* refs contains branch/tag with a slash */
+                    List<String> test = Arrays.asList(ref.split("/"));
+                    ref = String.join("%2F", test.subList(2, test.size()));
                 } else {
-                    String ref = (String) jsonObject.get("ref");
-                    String[] components = ref.split("/");
-                    if (components.length > 3) {
-                        /* refs contains branch/tag with a slash */
-                        List<String> test = Arrays.asList(ref.split("/"));
-                        ref = String.join("%2F", test.subList(2, test.size()));
-                    } else {
-                        ref = components[components.length - 1];
-                    }
+                    ref = components[components.length - 1];
+                }
 
-                    job = GogsUtils.find(jobName + "/" + ref, Job.class);
-
+                Arrays.asList(jobName, jobName + "/" + ref).forEach(j -> {
+                    Job job = GogsUtils.find(j, Job.class);
                     if (job != null) {
-                        foundJob = true;
+                        foundJob.set(true);
                         /* secret is stored in the properties of Job */
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                         if (property != null) { /* only if Gogs secret is defined on the job */
-                            jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                            jSecret.set(property.getGogsSecret()); /* Secret provided by Jenkins */
                         }
                     }
-                }
+                });
             } finally {
                 SecurityContextHolder.setContext(saveCtx);
             }
@@ -215,8 +207,8 @@ public class GogsWebHook implements UnprotectedRootAction {
                 gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
             } else {
                 try {
-                    if (gogsSignature.equals(encode(body, jSecret))) {
-                        gSecret = jSecret;
+                    if (gogsSignature.equals(encode(body, jSecret.get()))) {
+                        gSecret = jSecret.get();
                         // now hex is right, continue to old logic
                     }
                 } catch (Exception e) {
@@ -224,14 +216,14 @@ public class GogsWebHook implements UnprotectedRootAction {
                 }
             }
 
-            if (!foundJob) {
+            if (!foundJob.get()) {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
-            } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
+            } else if (isNullOrEmpty(jSecret.get()) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
-            } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
+            } else if (!isNullOrEmpty(jSecret.get()) && jSecret.equals(gSecret)) {
                 /* Password is set in Jenkins and Gogs, and is correct */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
             } else {

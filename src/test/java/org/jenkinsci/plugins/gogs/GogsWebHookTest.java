@@ -235,8 +235,6 @@ public class GogsWebHookTest {
     //
     // Helper methods
     //
-
-
     private void performDoIndexTest(StaplerRequest staplerRequest, StaplerResponse staplerResponse, File file) throws IOException {
         PrintWriter printWriter = new PrintWriter(file.getAbsoluteFile(), "UTF-8");
         when(staplerResponse.getWriter()).thenReturn(printWriter);
