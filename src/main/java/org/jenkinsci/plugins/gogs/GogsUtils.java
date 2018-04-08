@@ -2,6 +2,15 @@ package org.jenkinsci.plugins.gogs;
 
 import hudson.model.Item;
 import jenkins.model.Jenkins;
+import org.apache.commons.codec.binary.Hex;
+
+import javax.annotation.Nonnull;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.Charset;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 class GogsUtils {
 
@@ -26,4 +35,32 @@ class GogsUtils {
         return item;
     }
 
+    /**
+     * Converts Querystring into Map<String,String>
+     *
+     * @param qs Querystring
+     * @return returns map from querystring
+     */
+    static Map<String, String> splitQuery(String qs) {
+        return Pattern.compile("&").splitAsStream(qs)
+                .map(p -> p.split("="))
+                .collect(Collectors.toMap(a -> a[0], a -> a.length > 1 ? a[1] : ""));
+    }
+
+    /**
+     * encode sha256 hmac
+     *
+     * @param data data to hex
+     * @param key  key of HmacSHA256
+     * @return a String with the encoded sha256 hmac
+     * @throws Exception Something went wrong getting the sha256 hmac
+     */
+    static @Nonnull
+    String encode(String data, String key) throws Exception {
+        final Charset asciiCs = Charset.forName("UTF-8");
+        final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+        final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
+        sha256_HMAC.init(secret_key);
+        return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
+    }
 }
