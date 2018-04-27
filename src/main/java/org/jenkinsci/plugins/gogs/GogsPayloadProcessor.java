@@ -26,7 +26,6 @@ package org.jenkinsci.plugins.gogs;
 import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.security.ACL;
-import jenkins.model.ParameterizedJobMixIn;
 import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -38,6 +37,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+
+import static jenkins.model.ParameterizedJobMixIn.ParameterizedJob;
 
 class GogsPayloadProcessor {
     private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
@@ -60,8 +61,8 @@ class GogsPayloadProcessor {
             if (project != null) {
                 Cause cause = new GogsCause(deliveryID);
 
-                if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
-                    ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
+                if (project instanceof ParameterizedJob) {
+                    ParameterizedJob pJob = (ParameterizedJob) project;
                     pJob.getTriggers().values().stream()
                             .filter(trigger1 -> trigger1 instanceof GogsTrigger).findFirst()
                             .ifPresent((g) -> {

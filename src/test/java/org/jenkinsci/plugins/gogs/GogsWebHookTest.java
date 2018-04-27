@@ -104,7 +104,7 @@ public class GogsWebHookTest {
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
         when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("junk");
 
-        //perform the testÎ
+        //perform the test
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
@@ -149,7 +149,7 @@ public class GogsWebHookTest {
         when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
         when(staplerRequest.getQueryString()).thenReturn("foo=bar&blaah=blaah");
 
-        //perform the testÎ
+        //perform the test
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
@@ -171,7 +171,7 @@ public class GogsWebHookTest {
         when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
         when(staplerRequest.getQueryString()).thenReturn("job&foo=bar");
 
-        //perform the testÎ
+        //perform the test
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
@@ -193,7 +193,7 @@ public class GogsWebHookTest {
         when(staplerRequest.getHeader("X-Gogs-Event")).thenReturn("push");
         when(staplerRequest.getQueryString()).thenReturn("job=&foo=bar");
 
-        //perform the testÎ
+        //perform the test
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
@@ -220,7 +220,7 @@ public class GogsWebHookTest {
         when(staplerRequest.getInputStream()).thenReturn(inputStream);
         when(staplerRequest.getRequestURI()).thenReturn("/badUri/aaa");
 
-        //perform the testÎ
+        //perform the test
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
