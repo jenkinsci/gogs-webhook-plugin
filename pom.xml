@@ -7,7 +7,6 @@
     <artifactId>plugin</artifactId>
     <version>2.11</version>
   </parent>
-  <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>gogs-webhook</artifactId>
   <version>1.0.15-SNAPSHOT</version>
   <packaging>hpi</packaging>
@@ -23,6 +22,9 @@
     <!-- Security -->
     <owasp.version>3.1.2</owasp.version>
     <findbugs.failOnError>false</findbugs.failOnError>
+
+    <!-- Jackson -->
+    <jackson.version>2.9.5</jackson.version>
   </properties>
 
   <name>Jenkins Gogs plugin</name>
@@ -55,17 +57,27 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git</artifactId>
-      <version>2.2.5</version>
+      <version>3.8.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
-      <version>4.5.1</version>
+      <version>4.5.5</version>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -107,6 +119,18 @@
       <artifactId>cloudbees-folder</artifactId>
       <version>6.3</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.8.3</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.8.3</version>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
