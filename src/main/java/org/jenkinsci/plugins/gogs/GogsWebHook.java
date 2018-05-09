@@ -105,6 +105,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+        GogsCause gogsCause = new GogsCause();
 
         if (!sanityChecks(req, rsp)) {
             return;
@@ -140,8 +141,9 @@ public class GogsWebHook implements UnprotectedRootAction {
 
             AtomicReference<String> jSecret = new AtomicReference<>(null);
             AtomicBoolean foundJob = new AtomicBoolean(false);
-            payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
-            payloadProcessor.setPayload("before", jsonObject.getString("before"));
+            gogsCause.setGogsPayloadData(jsonObject.toString());
+            gogsCause.setDeliveryID(getGogsDelivery());
+            payloadProcessor.setCause(gogsCause);
 
             SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
 
@@ -183,10 +185,10 @@ public class GogsWebHook implements UnprotectedRootAction {
                 LOGGER.warning(msg);
             } else if (isNullOrEmpty(jSecret.get()) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
-                result = payloadProcessor.triggerJobs(jobName, getGogsDelivery());
+                result = payloadProcessor.triggerJobs(jobName);
             } else if (!isNullOrEmpty(jSecret.get()) && jSecret.get().equals(gSecret)) {
                 /* Password is set in Jenkins and Gogs, and is correct */
-                result = payloadProcessor.triggerJobs(jobName, getGogsDelivery());
+                result = payloadProcessor.triggerJobs(jobName);
             } else {
                 /* Gogs and Jenkins secrets differs */
                 result.setStatus(403, "Incorrect secret");

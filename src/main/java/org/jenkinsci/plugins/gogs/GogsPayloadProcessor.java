@@ -24,7 +24,6 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package org.jenkinsci.plugins.gogs;
 
 import hudson.model.BuildableItem;
-import hudson.model.Cause;
 import hudson.security.ACL;
 import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
@@ -43,15 +42,16 @@ import static jenkins.model.ParameterizedJobMixIn.ParameterizedJob;
 class GogsPayloadProcessor {
     private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
     private final Map<String, String> payload = new HashMap<>();
+    private GogsCause gogsCause = new GogsCause();
 
     GogsPayloadProcessor() {
     }
 
-    public void setPayload(String k, String v) {
-        this.payload.put(k, v);
+    public void setCause(GogsCause gogsCause) {
+        this.gogsCause = gogsCause;
     }
 
-    public GogsResults triggerJobs(String jobName, String deliveryID) {
+    public GogsResults triggerJobs(String jobName) {
         AtomicBoolean jobdone = new AtomicBoolean(false);
         SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
         GogsResults result = new GogsResults();
@@ -59,14 +59,14 @@ class GogsPayloadProcessor {
         try {
             BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
             if (project != null) {
-                Cause cause = new GogsCause(deliveryID);
 
                 if (project instanceof ParameterizedJob) {
                     ParameterizedJob pJob = (ParameterizedJob) project;
                     pJob.getTriggers().values().stream()
                             .filter(trigger1 -> trigger1 instanceof GogsTrigger).findFirst()
                             .ifPresent((g) -> {
-                                GogsPayload gogsPayload = new GogsPayload(this.payload);
+//                                GogsPayload gogsPayload = new GogsPayload(this.payload);
+                                GogsPayload gogsPayload = new GogsPayload(this.gogsCause);
                                 Optional.ofNullable(SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project))
                                         .ifPresent((item) -> {
                                             item.scheduleBuild2(0, gogsPayload);
@@ -75,7 +75,7 @@ class GogsPayloadProcessor {
                             });
                 }
                 if (!jobdone.get()) {
-                    project.scheduleBuild(0, cause);
+                    project.scheduleBuild(0, gogsCause);
                     jobdone.set(true);
                 }
             }

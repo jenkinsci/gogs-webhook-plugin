@@ -23,13 +23,74 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.model.Cause;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
 class GogsCause extends Cause {
-    private final String deliveryID;
+    private String deliveryID;
+    private GogsPayloadData gogsPayloadData;
+    private Map<String, String> envVars = new HashMap<>();
+    private final static Logger LOGGER = Logger.getLogger(GogsCause.class.getName());
+
+
+    public GogsCause() {
+    }
 
     public GogsCause(String deliveryID) {
         this.deliveryID = deliveryID;
+    }
+
+    public String getDeliveryID() {
+        return deliveryID;
+    }
+
+    public Map<String, String> getEnvVars() {
+        return envVars;
+    }
+
+    public void setDeliveryID(String deliveryID) {
+        this.deliveryID = deliveryID;
+    }
+
+    public void setGogsPayloadData(String json) {
+        Map<String, Object> map = null;
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        try {
+            gogsPayloadData = objectMapper.readValue(json, GogsPayloadData.class);
+            map = objectMapper.convertValue(gogsPayloadData, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            LOGGER.severe(e.getMessage());
+        }
+        if (gogsPayloadData != null) {
+            iterate(map, null);
+        }
+
+    }
+
+    private void iterate(Map<String, Object> map, String prefix) {
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            StringBuilder env_name = new StringBuilder();
+            if (prefix != null)
+                env_name.append(prefix.toUpperCase()).append("_");
+
+            if (entry.getValue() instanceof Map) {
+                iterate((Map<String, Object>) entry.getValue(), env_name + entry.getKey().toUpperCase());
+            } else if (entry.getValue() instanceof String || entry.getValue() instanceof Long || entry.getValue() instanceof Boolean) {
+                env_name.append(entry.getKey().toUpperCase());
+                envVars.put("GOGS_" + env_name.toString(), entry.getValue().toString());
+            }
+        }
     }
 
     @Override
