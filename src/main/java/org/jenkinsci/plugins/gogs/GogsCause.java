@@ -34,8 +34,7 @@ import java.util.logging.Logger;
 
 class GogsCause extends Cause {
     private String deliveryID;
-    private GogsPayloadData gogsPayloadData;
-    private Map<String, String> envVars = new HashMap<>();
+    private final Map<String, String> envVars = new HashMap<>();
     private final static Logger LOGGER = Logger.getLogger(GogsCause.class.getName());
 
 
@@ -44,10 +43,6 @@ class GogsCause extends Cause {
 
     public GogsCause(String deliveryID) {
         this.deliveryID = deliveryID;
-    }
-
-    public String getDeliveryID() {
-        return deliveryID;
     }
 
     public Map<String, String> getEnvVars() {
@@ -66,13 +61,13 @@ class GogsCause extends Cause {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         try {
-            gogsPayloadData = objectMapper.readValue(json, GogsPayloadData.class);
+            GogsPayloadData gogsPayloadData = objectMapper.readValue(json, GogsPayloadData.class);
             map = objectMapper.convertValue(gogsPayloadData, new TypeReference<Map<String, Object>>() {
             });
         } catch (Exception e) {
             LOGGER.severe(e.getMessage());
         }
-        if (gogsPayloadData != null) {
+        if (map != null) {
             iterate(map, null);
         }
 
@@ -85,6 +80,7 @@ class GogsCause extends Cause {
                 env_name.append(prefix.toUpperCase()).append("_");
 
             if (entry.getValue() instanceof Map) {
+                //noinspection unchecked
                 iterate((Map<String, Object>) entry.getValue(), env_name + entry.getKey().toUpperCase());
             } else if (entry.getValue() instanceof String || entry.getValue() instanceof Long || entry.getValue() instanceof Boolean) {
                 env_name.append(entry.getKey().toUpperCase());

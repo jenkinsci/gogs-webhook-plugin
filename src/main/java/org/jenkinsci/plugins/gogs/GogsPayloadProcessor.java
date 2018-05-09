@@ -25,14 +25,11 @@ package org.jenkinsci.plugins.gogs;
 
 import hudson.model.BuildableItem;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import jenkins.triggers.SCMTriggerItem;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
@@ -41,7 +38,6 @@ import static jenkins.model.ParameterizedJobMixIn.ParameterizedJob;
 
 class GogsPayloadProcessor {
     private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
-    private final Map<String, String> payload = new HashMap<>();
     private GogsCause gogsCause = new GogsCause();
 
     GogsPayloadProcessor() {
@@ -53,10 +49,9 @@ class GogsPayloadProcessor {
 
     public GogsResults triggerJobs(String jobName) {
         AtomicBoolean jobdone = new AtomicBoolean(false);
-        SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
         GogsResults result = new GogsResults();
 
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
             if (project != null) {
 
@@ -92,7 +87,6 @@ class GogsPayloadProcessor {
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
             }
-            SecurityContextHolder.setContext(saveCtx);
         }
 
         return result;

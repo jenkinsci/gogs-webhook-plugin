@@ -27,9 +27,8 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import net.sf.json.JSONObject;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -145,9 +144,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             gogsCause.setDeliveryID(getGogsDelivery());
             payloadProcessor.setCause(gogsCause);
 
-            SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
-
-            try {
+            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
                 StringJoiner stringJoiner = new StringJoiner("%2F");
                 Pattern.compile("/").splitAsStream((String) jsonObject.get("ref")).skip(2)
                         .forEach(stringJoiner::add);
@@ -161,8 +158,6 @@ public class GogsWebHook implements UnprotectedRootAction {
                         jSecret.set(property.getGogsSecret()); /* Secret provided by Jenkins */
                     }
                 });
-            } finally {
-                SecurityContextHolder.setContext(saveCtx);
             }
 
             String gSecret = null;
@@ -205,7 +200,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      *
      * @param req Request
      * @param rsp Response
-     * @throws IOException
+     * @throws IOException Exception
      */
     private boolean sanityChecks(StaplerRequest req, StaplerResponse rsp) throws IOException {
         //Check that we have something to process

@@ -104,10 +104,9 @@ public class GogsConfigHandler {
         String result = executor
                 .execute(Request.Post(gogsHooksConfigUrl).bodyString(jsonCommand, ContentType.APPLICATION_JSON))
                 .returnContent().asString();
-        JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( result );
-        int id = jsonObject.getInt("id");
+        JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON(result);
 
-        return id;
+        return jsonObject.getInt("id");
     }
 
     /**

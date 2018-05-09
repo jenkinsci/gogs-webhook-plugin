@@ -7,13 +7,12 @@ import hudson.model.TaskListener;
 import jenkins.model.CoreEnvironmentContributor;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 
+@SuppressWarnings("unused")
 @Extension
 public class GogsEnvironmentContributor extends CoreEnvironmentContributor {
     @Override
-    public void buildEnvironmentFor(@Nonnull Run r, @Nonnull EnvVars envs, @Nonnull TaskListener listener)
-            throws IOException, InterruptedException {
+    public void buildEnvironmentFor(@Nonnull Run r, @Nonnull EnvVars envs, @Nonnull TaskListener listener) {
         GogsCause gogsCause;
 
         gogsCause = (GogsCause) r.getCause(GogsCause.class);

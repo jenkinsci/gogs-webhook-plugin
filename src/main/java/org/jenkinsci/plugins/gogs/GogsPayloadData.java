@@ -2,13 +2,16 @@ package org.jenkinsci.plugins.gogs;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class GogsPayloadData {
+    @SuppressWarnings("unused")
     public static class UserDetails {
         public String name;
         public String email;
         public String username;
     }
 
+    @SuppressWarnings("unused")
     public static class Owner {
         public Long id;
         public String login;
@@ -18,6 +21,7 @@ public class GogsPayloadData {
         public String username;
     }
 
+    @SuppressWarnings("unused")
     public static class Commits {
         public String id;
         public String message;
@@ -30,6 +34,7 @@ public class GogsPayloadData {
         public String timestamp;
     }
 
+    @SuppressWarnings("unused")
     public static class Repository {
         public Long id;
         public Owner owner;
