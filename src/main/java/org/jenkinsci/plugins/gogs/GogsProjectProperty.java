@@ -31,6 +31,7 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
 import java.util.logging.Logger;
 
 @SuppressWarnings("ALL")
@@ -68,7 +69,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
             return gogsUsePayload;
         }
 
-        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) {
+        public JobProperty<?> newInstance(@Nonnull StaplerRequest req, @Nonnull JSONObject formData) {
             GogsProjectProperty tpp = req.bindJSON(
                     GogsProjectProperty.class,
                     formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)

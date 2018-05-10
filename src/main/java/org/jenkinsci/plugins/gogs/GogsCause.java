@@ -23,7 +23,6 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.model.Cause;
@@ -31,6 +30,8 @@ import hudson.model.Cause;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import static org.jenkinsci.plugins.gogs.GogsUtils.cast;
 
 class GogsCause extends Cause {
     private String deliveryID;
@@ -54,23 +55,20 @@ class GogsCause extends Cause {
     }
 
     public void setGogsPayloadData(String json) {
-        Map<String, Object> map = null;
+        Map<String, Object> gogsPayloadData = null;
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         try {
-            GogsPayloadData gogsPayloadData = objectMapper.readValue(json, GogsPayloadData.class);
-            map = objectMapper.convertValue(gogsPayloadData, new TypeReference<Map<String, Object>>() {
-            });
+            gogsPayloadData = cast(objectMapper.readValue(json, Map.class));
         } catch (Exception e) {
             LOGGER.severe(e.getMessage());
         }
-        if (map != null) {
-            iterate(map, null);
+        if (gogsPayloadData != null) {
+            iterate(gogsPayloadData, null);
         }
-
     }
 
     private void iterate(Map<String, Object> map, String prefix) {

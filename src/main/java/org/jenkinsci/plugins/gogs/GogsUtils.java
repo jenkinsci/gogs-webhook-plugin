@@ -4,7 +4,6 @@ import hudson.model.Item;
 import jenkins.model.Jenkins;
 import org.apache.commons.codec.binary.Hex;
 
-import javax.annotation.Nonnull;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.Charset;
@@ -55,12 +54,23 @@ class GogsUtils {
      * @return a String with the encoded sha256 hmac
      * @throws Exception Something went wrong getting the sha256 hmac
      */
-    static @Nonnull
-    String encode(String data, String key) throws Exception {
+    static String encode(String data, String key) throws Exception {
         final Charset asciiCs = Charset.forName("UTF-8");
         final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
         final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
         sha256_HMAC.init(secret_key);
         return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
+    }
+
+    /**
+     * Cast object
+     *
+     * @param obj object to cast
+     * @param <T> cast to type
+     * @return Casted object
+     */
+    @SuppressWarnings("unchecked")
+    static public <T> T cast(Object obj) {
+        return (T) obj;
     }
 }
