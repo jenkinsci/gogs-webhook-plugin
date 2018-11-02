@@ -7,7 +7,7 @@
       </f:entry>
     </f:optionalBlock>
     <f:optionalBlock title="Branch Filter" inline="true" checked="${instance.gogsBranchFilter != null}">
-      <f:entry title="${%BranchFilter}">
+      <f:entry title="${%BranchFilter}" description="default: master">
         <f:textbox default="master" field="gogsBranchFilter" />
       </f:entry>
     </f:optionalBlock>
