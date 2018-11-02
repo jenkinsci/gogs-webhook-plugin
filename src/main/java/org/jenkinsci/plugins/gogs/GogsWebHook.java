@@ -229,7 +229,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             }
 
             // filter branch, not ref not match branch filter, skip trigger.
-            boolean isRefMatched = false;
+            boolean isRefMatched = true;
             if (branchFilter != null && branchFilter != "*" && branchFilter.length() > 0) {
                 isRefMatched = ref == null || ref.length() == 0 || ref.endsWith(branchFilter);
             }
