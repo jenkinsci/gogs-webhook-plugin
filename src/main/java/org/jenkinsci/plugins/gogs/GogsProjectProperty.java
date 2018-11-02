@@ -97,7 +97,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
 
         @Override
         public String getDisplayName() {
-            return "Gogs Secret";
+            return "Gogs Project Property";
         }
     }
 }
