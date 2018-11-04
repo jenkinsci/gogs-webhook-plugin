@@ -168,8 +168,10 @@ public class GogsWebHook implements UnprotectedRootAction {
             }
 
             String jSecret = null;
-            String branchFilter = null;
             boolean foundJob = false;
+
+            // filter branch, if ref not match branch filter, skip trigger job.
+            boolean isRefMatched = true;
 
             String ref = (String) jsonObject.getString("ref");
             payloadProcessor.setPayload("ref", ref);
@@ -186,7 +188,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
                         jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                        branchFilter = property.getGogsBranchFilter(); /* branch filter provided by jenkins */
+                        isRefMatched = property.filterBranch(ref);
                     }
                 } else {
                     String[] components = ref.split("/");
@@ -206,7 +208,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                         if (property != null) { /* only if Gogs secret is defined on the job */
                             jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
-                            branchFilter = property.getGogsBranchFilter(); /* branch filter provided by jenkins */
+                            isRefMatched = property.filterBranch(ref);
                         }
                     }
                 }
@@ -228,18 +230,12 @@ public class GogsWebHook implements UnprotectedRootAction {
                 }
             }
 
-            // filter branch, not ref not match branch filter, skip trigger.
-            boolean isRefMatched = true;
-            if (branchFilter != null && !branchFilter.equals("*") && branchFilter.length() > 0) {
-                isRefMatched = ref == null || ref.length() == 0 || ref.endsWith(branchFilter);
-            }
-
             if (!foundJob) {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
             } else if (!isRefMatched) {
-                String msg = String.format("received ref ('%s') is not matched with branch filter in job '%s' ('%s')", ref, jobName, branchFilter);
+                String msg = String.format("received ref ('%s') is not matched with branch filter in job '%s'", ref, jobName);
                 result.setStatus(200, msg);
                 LOGGER.info(msg);
             } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {

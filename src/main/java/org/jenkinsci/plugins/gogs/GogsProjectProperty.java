@@ -62,6 +62,13 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
         return gogsBranchFilter != null && gogsBranchFilter.length() > 0;
     }
 
+    public boolean filterBranch(String ref) {
+        if (gogsBranchFilter != null && gogsBranchFilter.length() > 0 && !gogsBranchFilter.equals("*")) {
+            return ref == null || ref.length() == 0 || ref.endsWith(gogsBranchFilter);
+        }
+        return true;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
 
     @Extension
