@@ -6,9 +6,9 @@
         <f:password field="gogsSecret" />
       </f:entry>
     </f:optionalBlock>
-    <f:optionalBlock title="Branch Filter" inline="true" checked="${instance.gogsBranchFilter != null}">
-      <f:entry title="${%BranchFilter}" description="default: master">
-        <f:textbox default="master" field="gogsBranchFilter" />
+    <f:optionalBlock title="Branch Filter" inline="true" checked="${instance.hasBranchFilter}">
+      <f:entry title="${%BranchFilter}">
+        <f:textbox field="gogsBranchFilter" />
       </f:entry>
     </f:optionalBlock>
   </f:section>
