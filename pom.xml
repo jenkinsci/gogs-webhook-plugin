@@ -24,7 +24,7 @@
     <findbugs.failOnError>false</findbugs.failOnError>
 
     <!-- Jackson -->
-    <jackson.version>2.9.5</jackson.version>
+    <jackson.version>2.9.7</jackson.version>
   </properties>
 
   <name>Jenkins Gogs plugin</name>
