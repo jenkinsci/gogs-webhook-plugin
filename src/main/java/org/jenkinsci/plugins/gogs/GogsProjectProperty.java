@@ -37,11 +37,13 @@ import java.util.logging.Logger;
 public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
     private final String gogsSecret;
     private final boolean gogsUsePayload;
+    private final String gogsBranchFilter;
 
     @DataBoundConstructor
-    public GogsProjectProperty(String gogsSecret, boolean gogsUsePayload) {
+    public GogsProjectProperty(String gogsSecret, boolean gogsUsePayload, String gogsBranchFilter) {
         this.gogsSecret = gogsSecret;
         this.gogsUsePayload = gogsUsePayload;
+        this.gogsBranchFilter = gogsBranchFilter;
     }
 
     public String getGogsSecret() {
@@ -52,6 +54,21 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
         return this.gogsUsePayload;
     }
 
+    public String getGogsBranchFilter() {
+        return this.gogsBranchFilter;
+    }
+
+    public boolean getHasBranchFilter() {
+        return gogsBranchFilter != null && gogsBranchFilter.length() > 0;
+    }
+
+    public boolean filterBranch(String ref) {
+        if (gogsBranchFilter != null && gogsBranchFilter.length() > 0 && !gogsBranchFilter.equals("*")) {
+            return ref == null || ref.length() == 0 || ref.endsWith(gogsBranchFilter);
+        }
+        return true;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
 
     @Extension
@@ -59,6 +76,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
         public static final String GOGS_PROJECT_BLOCK_NAME = "gogsProject";
         private String gogsSecret;
         private boolean gogsUsePayload;
+        private String gogsBranchFilter;
 
         public String getGogsSecret() {
             return gogsSecret;
@@ -66,6 +84,10 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
 
         public boolean getGogsUsePayload() {
             return gogsUsePayload;
+        }
+
+        public String getGogsBranchFilter() {
+            return gogsBranchFilter;
         }
 
         public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) {
@@ -76,15 +98,17 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
             if (tpp != null) {
                 LOGGER.finest(formData.toString());
                 LOGGER.finest(tpp.gogsSecret);
+                LOGGER.finest(tpp.gogsBranchFilter);
 
                 gogsSecret = tpp.gogsSecret;
+                gogsBranchFilter = tpp.gogsBranchFilter;
             }
             return tpp;
         }
 
         @Override
         public String getDisplayName() {
-            return "Gogs Secret";
+            return "Gogs Project Property";
         }
     }
 }

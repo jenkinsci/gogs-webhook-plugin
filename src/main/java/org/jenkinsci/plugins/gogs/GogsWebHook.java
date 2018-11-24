@@ -169,7 +169,12 @@ public class GogsWebHook implements UnprotectedRootAction {
 
             String jSecret = null;
             boolean foundJob = false;
-            payloadProcessor.setPayload("ref", jsonObject.getString("ref"));
+
+            // filter branch, if ref not match branch filter, skip trigger job.
+            boolean isRefMatched = true;
+
+            String ref = (String) jsonObject.getString("ref");
+            payloadProcessor.setPayload("ref", ref);
             payloadProcessor.setPayload("before", jsonObject.getString("before"));
 
             SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
@@ -183,9 +188,9 @@ public class GogsWebHook implements UnprotectedRootAction {
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
                         jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                        isRefMatched = property.filterBranch(ref);
                     }
                 } else {
-                    String ref = (String) jsonObject.get("ref");
                     String[] components = ref.split("/");
                     if (components.length > 3) {
                         /* refs contains branch/tag with a slash */
@@ -203,6 +208,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                         if (property != null) { /* only if Gogs secret is defined on the job */
                             jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                            isRefMatched = property.filterBranch(ref);
                         }
                     }
                 }
@@ -228,6 +234,10 @@ public class GogsWebHook implements UnprotectedRootAction {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
+            } else if (!isRefMatched) {
+                String msg = String.format("received ref ('%s') is not matched with branch filter in job '%s'", ref, jobName);
+                result.setStatus(200, msg);
+                LOGGER.info(msg);
             } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
                 result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
