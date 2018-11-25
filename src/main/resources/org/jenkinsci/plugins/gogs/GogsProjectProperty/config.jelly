@@ -1,9 +1,14 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core"  xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
   <f:section title="Gogs Webhook" name="${descriptor.GOGS_PROJECT_BLOCK_NAME}">
     <f:optionalBlock title="Use Gogs secret" inline="true" checked="${instance.gogsSecret != null}">
       <f:entry title="${%Secret}">
-        <f:password field="gogsSecret" />
+        <f:password field="gogsSecret"/>
+      </f:entry>
+    </f:optionalBlock>
+    <f:optionalBlock title="Branch Filter" inline="true" checked="${instance.hasBranchFilter}">
+      <f:entry title="${%BranchFilter}">
+        <f:textbox field="gogsBranchFilter"/>
       </f:entry>
     </f:optionalBlock>
   </f:section>

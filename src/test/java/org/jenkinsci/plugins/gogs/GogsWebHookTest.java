@@ -24,8 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -229,6 +228,30 @@ public class GogsWebHookTest {
         String expectedOutput = "No payload or URI contains invalid entries.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
+        log.info("Test succeeded.");
+    }
+
+    @Test
+    public void whenJobBranchNotMatchMustReturnError() throws Exception {
+        Object[][] test_vals = {
+                {null, "master", true},
+                {null, "dev", true},
+                {"", "master", true},
+                {"", "dev", true},
+                {"*", "master", true},
+                {"*", "dev", true},
+                {"dev", "master", false},
+                {"dev", "dev", true},
+                {"master", "master", true},
+                {"master", "dev", false},
+        };
+        for (Object[] test_val : test_vals) {
+            String filter = (String) test_val[0];
+            String ref = (String) test_val[1];
+            boolean ret = (Boolean) test_val[2];
+            GogsProjectProperty property = new GogsProjectProperty(null, false, filter);
+            assertSame(String.format("branch filter check failed for [%s -> %s]", ref, filter), ret, property.filterBranch(ref));
+        }
         log.info("Test succeeded.");
     }
 

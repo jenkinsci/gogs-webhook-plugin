@@ -102,6 +102,7 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @param rsp response
      * @throws IOException problem while parsing
      */
+    @SuppressWarnings("WeakerAccess")
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
         GogsCause gogsCause = new GogsCause();
@@ -121,7 +122,8 @@ public class GogsWebHook implements UnprotectedRootAction {
         if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
             JSONObject jsonObject = JSONObject.fromObject(body);
             JSONObject commits = (JSONObject) jsonObject.getJSONArray("commits").get(0);
-            String message = (String) commits.get("message");
+            String ref = jsonObject.getString("ref");
+            String message = commits.getString("message");
 
             if (message.startsWith("[IGNORE]")) {
                 // Ignore commits starting with message "[IGNORE]"
@@ -140,22 +142,23 @@ public class GogsWebHook implements UnprotectedRootAction {
 
             AtomicReference<String> jSecret = new AtomicReference<>(null);
             AtomicBoolean foundJob = new AtomicBoolean(false);
+            AtomicBoolean isRefMatched = new AtomicBoolean(true);
             gogsCause.setGogsPayloadData(jsonObject.toString());
             gogsCause.setDeliveryID(getGogsDelivery());
             payloadProcessor.setCause(gogsCause);
 
-            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+            try (ACLContext ignored = ACL.as(ACL.SYSTEM)) {
                 StringJoiner stringJoiner = new StringJoiner("%2F");
-                Pattern.compile("/").splitAsStream((String) jsonObject.get("ref")).skip(2)
-                        .forEach(stringJoiner::add);
-                String ref = stringJoiner.toString();
+                Pattern.compile("/").splitAsStream(jsonObject.getString("ref")).skip(2).forEach(stringJoiner::add);
+                String ref_strj = stringJoiner.toString();
 
                 /* secret is stored in the properties of Job */
-                Stream.of(jobName, jobName + "/" + ref).map(j -> GogsUtils.find(j, Job.class)).filter(Objects::nonNull).forEach(job -> {
+                Stream.of(jobName, jobName + "/" + ref_strj).map(j -> GogsUtils.find(j, Job.class)).filter(Objects::nonNull).forEach(job -> {
                     foundJob.set(true);
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
                         jSecret.set(property.getGogsSecret()); /* Secret provided by Jenkins */
+                        isRefMatched.set(property.filterBranch(ref));
                     }
                 });
             }
@@ -178,6 +181,10 @@ public class GogsWebHook implements UnprotectedRootAction {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
+            } else if (!isRefMatched.get()) {
+                String msg = String.format("received ref ('%s') is not matched with branch filter in job '%s'", ref, jobName);
+                result.setStatus(200, msg);
+                LOGGER.info(msg);
             } else if (isNullOrEmpty(jSecret.get()) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
                 result = payloadProcessor.triggerJobs(jobName);

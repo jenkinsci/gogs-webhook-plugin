@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.11</version>
+    <version>2.30</version>
   </parent>
   <artifactId>gogs-webhook</artifactId>
   <version>1.0.15-SNAPSHOT</version>
@@ -16,7 +16,7 @@
     <java.level.test>8</java.level.test>
 
     <!-- Jenkins -->
-    <jenkins.version>2.60.3</jenkins.version>
+    <jenkins.version>2.138.3</jenkins.version>
     <jenkins-test-harness.version>2.38</jenkins-test-harness.version>
 
     <!-- Security -->
