@@ -33,6 +33,7 @@ import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -146,6 +147,8 @@ public class GogsWebHook implements UnprotectedRootAction {
             jobName = jobObject.toString();
         }
 
+        final Object branchName = queryStringMap.get("branch");
+
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
         if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
@@ -156,6 +159,17 @@ public class GogsWebHook implements UnprotectedRootAction {
             if (message.startsWith("[IGNORE]")) {
                 // Ignore commits starting with message "[IGNORE]"
                 result.setStatus(200, "Ignoring push");
+                exitWebHook(result, rsp);
+                return;
+            }
+
+            String ref = jsonObject.getString("ref");
+            LOGGER.fine("found ref " + ref);
+            LOGGER.fine("found branch " + branchName);
+            if (null != branchName && !StringUtils.containsIgnoreCase(ref, (String) branchName)) {
+                // ignore all commit if they is not in context
+                LOGGER.fine("build was rejected");
+                result.setStatus(200, String.format("Commit is not relevant. Relevant context is %s", branchName));
                 exitWebHook(result, rsp);
                 return;
             }
@@ -174,7 +188,7 @@ public class GogsWebHook implements UnprotectedRootAction {
             // filter branch, if ref not match branch filter, skip trigger job.
             boolean isRefMatched = true;
 
-            String ref = (String) jsonObject.getString("ref");
+
             payloadProcessor.setPayload("ref", ref);
             payloadProcessor.setPayload("before", jsonObject.getString("before"));
 
