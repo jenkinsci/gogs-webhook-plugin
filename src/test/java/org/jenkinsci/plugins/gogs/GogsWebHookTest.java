@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.gogs;
 
+import hudson.util.Secret;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
@@ -235,6 +236,7 @@ public class GogsWebHookTest {
 
     @Test
     public void whenJobBranchNotMatchMustReturnError() throws Exception {
+        Secret secret = Secret.fromString(null);
         String[][] test_vals = {
             {null, "master", "true"},
             {null, "dev", "true"},
@@ -253,7 +255,7 @@ public class GogsWebHookTest {
             String ref = test_vals[i][1];
             boolean ret = Boolean.parseBoolean(test_vals[i][2]);
 
-            GogsProjectProperty property = new GogsProjectProperty(null, false, filter);
+            GogsProjectProperty property = new GogsProjectProperty(secret, false, filter);
             assertSame(String.format("branch filter check failed for [%s -> %s]", ref, filter), ret, property.filterBranch(ref));
         }
         
