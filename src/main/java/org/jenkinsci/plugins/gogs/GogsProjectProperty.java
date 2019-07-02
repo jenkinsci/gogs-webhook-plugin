@@ -42,9 +42,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
 
     @Deprecated
     public GogsProjectProperty(String gogsSecret, boolean gogsUsePayload, String gogsBranchFilter) {
-        this.gogsSecret = Secret.fromString(gogsSecret);
-        this.gogsUsePayload = gogsUsePayload;
-        this.gogsBranchFilter = gogsBranchFilter;
+        this(Secret.fromString(gogsSecret), gogsUsePayload, gogsBranchFilter);
     }
 
     @DataBoundConstructor
@@ -53,8 +51,9 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
         this.gogsUsePayload = gogsUsePayload;
         this.gogsBranchFilter = gogsBranchFilter;
     }
-    public String getGogsSecret() {
-        return Secret.toString(this.gogsSecret);
+
+    public Secret getGogsSecret() {
+        return this.gogsSecret;
     }
 
     public boolean getGogsUsePayload() {

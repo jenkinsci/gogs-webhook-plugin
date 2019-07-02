@@ -1,13 +1,23 @@
 package org.jenkinsci.plugins.gogs;
 
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
+import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 
 public class GogsWebHookJenkinsTest {
     final Logger log = LoggerFactory.getLogger(GogsWebHookJenkinsTest.class);
@@ -41,5 +51,43 @@ public class GogsWebHookJenkinsTest {
         }
         
         log.info("Test succeeded.");
+    }
+
+    @Test
+    @Issue("SECURITY-1438")
+    public void ensureTheSecretIsEncryptedOnDisk() throws Exception {
+        Secret secret = Secret.fromString("s3cr3t");
+        FreeStyleProject p = prepareProjectWithGogsProperty(secret);
+
+        File configFile = p.getConfigFile().getFile();
+        String configFileContent = FileUtils.readFileToString(configFile, StandardCharsets.UTF_8);
+        assertThat(configFileContent, not(containsString(secret.getPlainText())));
+        assertThat(configFileContent, containsString(secret.getEncryptedValue()));
+    }
+
+    @Test
+    @Issue("SECURITY-1438")
+    public void ensureTheSecretIsEncryptedInHtml() throws Exception {
+        Secret secret = Secret.fromString("s3cr3t");
+        FreeStyleProject p = prepareProjectWithGogsProperty(secret);
+
+        JenkinsRule.WebClient wc = j.createWebClient();
+        // there are some errors in the page and thus the status is 500 but the content is there
+        wc.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        HtmlPage htmlPage = wc.goTo(p.getUrl() + "configure");
+        String pageContent = htmlPage.getWebResponse().getContentAsString();
+        assertThat(pageContent, not(containsString(secret.getPlainText())));
+        assertThat(pageContent, containsString(secret.getEncryptedValue()));
+    }
+
+    private FreeStyleProject prepareProjectWithGogsProperty(Secret secret) throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+
+        GogsProjectProperty prop = new GogsProjectProperty(secret, true, "master");
+        p.addProperty(prop);
+
+        p.save();
+
+        return p;
     }
 }
