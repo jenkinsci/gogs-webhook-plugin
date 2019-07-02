@@ -234,34 +234,6 @@ public class GogsWebHookTest {
         log.info("Test succeeded.");
     }
 
-    @Test
-    public void whenJobBranchNotMatchMustReturnError() throws Exception {
-        Secret secret = Secret.fromString(null);
-        String[][] test_vals = {
-            {null, "master", "true"},
-            {null, "dev", "true"},
-            {"", "master", "true"},
-            {"", "dev", "true"},
-            {"*", "master", "true"},
-            {"*", "dev", "true"},
-            {"dev", "master", "false"},
-            {"dev", "dev", "true"},
-            {"master", "master", "true"},
-            {"master", "dev", "false"},
-        };
-
-        for (int i = 0; i < test_vals.length; ++i) {
-            String filter = test_vals[i][0];
-            String ref = test_vals[i][1];
-            boolean ret = Boolean.parseBoolean(test_vals[i][2]);
-
-            GogsProjectProperty property = new GogsProjectProperty(secret, false, filter);
-            assertSame(String.format("branch filter check failed for [%s -> %s]", ref, filter), ret, property.filterBranch(ref));
-        }
-        
-        log.info("Test succeeded.");
-    }
-
     //
     // Helper methods
     //
