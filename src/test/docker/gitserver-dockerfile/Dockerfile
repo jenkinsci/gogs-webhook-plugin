@@ -1,4 +1,4 @@
-FROM gogs/gogs:0.11.4
+FROM gogs/gogs:0.11.86
 
 ARG FIRST_USER=dev
 

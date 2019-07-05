@@ -38,8 +38,11 @@ curl -v -X POST -s \
   -F "retype=${FIRST_USER}" \
   ${GITSERVER_URL}/user/sign_up
 
-cat /app/repos-to-mirror
+# Create Access token for first user
+TOKEN=$(curl -X POST -s -F "name=${FIRST_USER}" -u "${FIRST_USER}:${FIRST_USER}" \
+ ${GITSERVER_URL}/api/v1/users/${FIRST_USER}/tokens | sed 's/.*"sha1":"\(.*\)"}/\1/')
 
+echo $TOKEN
 while IFS= read -r LINE  || [[ -n "${LINE}" ]];
 do
   echo "==LINE: ${LINE}"
@@ -50,10 +53,10 @@ do
 
   # Create repo to migrate
   curl -v -X POST -s \
+    -H "Authorization: token ${TOKEN}" \
     -F "uid=1" \
     -F "clone_addr=${REMOTE_REPO_URL}" \
     -F "repo_name=${REPO_NAME}" \
-    -u "${FIRST_USER}:${FIRST_USER}" \
     ${GITSERVER_API_URL}/repos/migrate
 
 done < /app/repos-to-mirror
