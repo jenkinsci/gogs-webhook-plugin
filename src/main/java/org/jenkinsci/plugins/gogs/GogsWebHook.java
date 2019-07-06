@@ -27,6 +27,7 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -187,7 +188,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                     /* secret is stored in the properties of Job */
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                        jSecret = Secret.toString(property.getGogsSecret()); /* Secret provided by Jenkins */
                         isRefMatched = property.filterBranch(ref);
                     }
                 } else {
@@ -207,7 +208,7 @@ public class GogsWebHook implements UnprotectedRootAction {
                         /* secret is stored in the properties of Job */
                         final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                         if (property != null) { /* only if Gogs secret is defined on the job */
-                            jSecret = property.getGogsSecret(); /* Secret provided by Jenkins */
+                            jSecret = Secret.toString(property.getGogsSecret()); /* Secret provided by Jenkins */
                             isRefMatched = property.filterBranch(ref);
                         }
                     }
