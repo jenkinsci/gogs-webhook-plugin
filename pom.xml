@@ -123,6 +123,18 @@
       <!--These tests can come in the way of somebody that doesn't have a docker ready environment. So it is better
       to give a way to skip them-->
       <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>findbugs-maven-plugin</artifactId>
+              <version>3.0.4</version>
+              <configuration>
+                <failOnError>${maven.findbugs.failure.strict}</failOnError>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
         <plugins>
           <plugin>
             <artifactId>maven-resources-plugin</artifactId>
