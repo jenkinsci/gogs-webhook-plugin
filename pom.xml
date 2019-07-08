@@ -16,6 +16,7 @@
     <java.level>8</java.level>
     <jenkins-test-harness.version>2.13</jenkins-test-harness.version>
     <java.level.test>8</java.level.test>
+    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <name>Jenkins Gogs plugin</name>
@@ -238,6 +239,18 @@
       </build>
     </profile>
   </profiles>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>3.0.5</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 
   <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
   <repositories>
