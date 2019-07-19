@@ -193,6 +193,20 @@ public class GogsConfigHandler {
         }
     }
 
+    void removeRepo(String projectName) throws IOException {
+        Executor executor = getExecutor();
+        String gogsHookConfigUrl = getGogsServer_apiUrl() + "repos/" + this.gogsServer_user + "/" + projectName;
+        Request request = Request.Delete(gogsHookConfigUrl);
+
+        if (this.gogsAccessToken != null) {
+            request.addHeader("Authorization", "token " + this.gogsAccessToken);
+        }
+
+        int result = executor.execute(request).returnResponse().getStatusLine().getStatusCode();
+        if (result != 204) {
+            throw new IOException("Repository deletion call did not return the expected value (returned " +  result + ")");
+        }
+    }
 
     /**
      * Gets a Executor object. The Executor object allows to cache the authentication data.
