@@ -23,33 +23,38 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import java.util.logging.Logger;
+
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-
-import javax.annotation.Nonnull;
-import java.util.logging.Logger;
 
 @SuppressWarnings("ALL")
 public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
     private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
 
-    private final String gogsSecret;
+    private final Secret gogsSecret;
     private final boolean gogsUsePayload;
     private final String gogsBranchFilter;
 
-    @DataBoundConstructor
+    @Deprecated
     public GogsProjectProperty(String gogsSecret, boolean gogsUsePayload, String gogsBranchFilter) {
+        this(Secret.fromString(gogsSecret), gogsUsePayload, gogsBranchFilter);
+    }
+
+    @DataBoundConstructor
+    public GogsProjectProperty(Secret gogsSecret, boolean gogsUsePayload, String gogsBranchFilter) {
         this.gogsSecret = gogsSecret;
         this.gogsUsePayload = gogsUsePayload;
         this.gogsBranchFilter = gogsBranchFilter;
     }
 
-    public String getGogsSecret() {
+    public Secret getGogsSecret() {
         return this.gogsSecret;
     }
 
@@ -75,12 +80,12 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         public static final String GOGS_PROJECT_BLOCK_NAME = "gogsProject";
-        private String gogsSecret;
+        private Secret gogsSecret;
         private boolean gogsUsePayload;
         private String gogsBranchFilter;
 
         public String getGogsSecret() {
-            return gogsSecret;
+            return Secret.toString(gogsSecret);
         }
 
         public boolean getGogsUsePayload() {
@@ -91,14 +96,18 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
             return gogsBranchFilter;
         }
 
-        public JobProperty<?> newInstance(@Nonnull StaplerRequest req, @Nonnull JSONObject formData) {
-            GogsProjectProperty tpp = req.bindJSON(
-                    GogsProjectProperty.class,
-                    formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
-            );
+        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) {
+            GogsProjectProperty tpp = null;
+
+            if (req != null) {
+                tpp = req.bindJSON(
+                        GogsProjectProperty.class,
+                        formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
+                );
+            }
+
             if (tpp != null) {
                 LOGGER.finest(formData.toString());
-                LOGGER.finest(tpp.gogsSecret);
                 LOGGER.finest(tpp.gogsBranchFilter);
 
                 gogsSecret = tpp.gogsSecret;

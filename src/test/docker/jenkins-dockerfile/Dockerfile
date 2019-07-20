@@ -1,4 +1,4 @@
-FROM jenkinsci/jenkins:latest
+FROM jenkins/jenkins:lts-alpine
 
 # Load the required dependencies for the plugin under test
 RUN /usr/local/bin/install-plugins.sh git workflow-aggregator pipeline-model-extensions cloudbees-folder

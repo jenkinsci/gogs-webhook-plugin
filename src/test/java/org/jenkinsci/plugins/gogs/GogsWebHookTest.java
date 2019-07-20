@@ -1,5 +1,17 @@
 package org.jenkinsci.plugins.gogs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
@@ -16,17 +28,6 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class GogsWebHookTest {
     final Logger log = LoggerFactory.getLogger(GogsWebHookTest.class);
@@ -88,7 +89,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "Only push event can be accepted.";
+        String expectedOutput = "Only push or release events are accepted.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -109,7 +110,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "Only push event can be accepted.";
+        String expectedOutput = "Only push or release events are accepted.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -228,30 +229,6 @@ public class GogsWebHookTest {
         String expectedOutput = "No payload or URI contains invalid entries.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
-        log.info("Test succeeded.");
-    }
-
-    @Test
-    public void whenJobBranchNotMatchMustReturnError() throws Exception {
-        Object[][] test_vals = {
-                {null, "master", true},
-                {null, "dev", true},
-                {"", "master", true},
-                {"", "dev", true},
-                {"*", "master", true},
-                {"*", "dev", true},
-                {"dev", "master", false},
-                {"dev", "dev", true},
-                {"master", "master", true},
-                {"master", "dev", false},
-        };
-        for (Object[] test_val : test_vals) {
-            String filter = (String) test_val[0];
-            String ref = (String) test_val[1];
-            boolean ret = (Boolean) test_val[2];
-            GogsProjectProperty property = new GogsProjectProperty(null, false, filter);
-            assertSame(String.format("branch filter check failed for [%s -> %s]", ref, filter), ret, property.filterBranch(ref));
-        }
         log.info("Test succeeded.");
     }
 

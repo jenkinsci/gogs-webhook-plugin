@@ -23,15 +23,8 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import hudson.Extension;
-import hudson.model.Job;
-import hudson.model.UnprotectedRootAction;
-import hudson.security.ACL;
-import hudson.security.ACLContext;
-import net.sf.json.JSONObject;
-import org.apache.commons.io.IOUtils;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,8 +38,16 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Strings.isNullOrEmpty;
+import hudson.Extension;
+import hudson.model.Job;
+import hudson.model.UnprotectedRootAction;
+import hudson.security.ACL;
+import hudson.security.ACLContext;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * @author Alexander Verhaar
@@ -59,6 +60,7 @@ public class GogsWebHook implements UnprotectedRootAction {
     private String gogsDelivery = null;
     private String gogsSignature = null;
     private String jobName = null;
+    private String xGogsEvent = null;
     static final String URLNAME = "gogs-webhook";
 
     public String getDisplayName() {
@@ -104,6 +106,10 @@ public class GogsWebHook implements UnprotectedRootAction {
      */
     @SuppressWarnings("WeakerAccess")
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        AtomicReference<String> jSecret = new AtomicReference<>(null);
+        AtomicBoolean foundJob = new AtomicBoolean(false);
+        AtomicBoolean isRefMatched = new AtomicBoolean(true);
+
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
         GogsCause gogsCause = new GogsCause();
 
@@ -119,10 +125,11 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
-        if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
-            JSONObject jsonObject = JSONObject.fromObject(body);
+        JSONObject jsonObject = JSONObject.fromObject(body);
+        String ref = jsonObject.optString("ref", null);
+
+        if (xGogsEvent.equals("push") && req.getRequestURI().contains("/" + URLNAME + "/") && !body.isEmpty()) {
             JSONObject commits = (JSONObject) jsonObject.getJSONArray("commits").get(0);
-            String ref = jsonObject.getString("ref");
             String message = commits.getString("message");
 
             if (message.startsWith("[IGNORE]")) {
@@ -140,9 +147,6 @@ public class GogsWebHook implements UnprotectedRootAction {
                 body = body.substring(8);
             }
 
-            AtomicReference<String> jSecret = new AtomicReference<>(null);
-            AtomicBoolean foundJob = new AtomicBoolean(false);
-            AtomicBoolean isRefMatched = new AtomicBoolean(true);
             gogsCause.setGogsPayloadData(jsonObject.toString());
             gogsCause.setDeliveryID(getGogsDelivery());
             payloadProcessor.setCause(gogsCause);
@@ -157,12 +161,30 @@ public class GogsWebHook implements UnprotectedRootAction {
                     foundJob.set(true);
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret.set(property.getGogsSecret()); /* Secret provided by Jenkins */
+                        jSecret.set(Secret.toString(property.getGogsSecret())); /* Secret provided by Jenkins */
                         isRefMatched.set(property.filterBranch(ref));
                     }
                 });
             }
+        } else {
+            result.setStatus(404, "No payload or URI contains invalid entries.");
+        }
 
+        // Gogs release event
+        if (xGogsEvent.equals("release")) {
+            try (ACLContext ignored = ACL.as(ACL.SYSTEM)) {
+                /* secret is stored in the properties of Job */
+                Stream.of(jobName).map(j -> GogsUtils.find(j, Job.class)).filter(Objects::nonNull).forEach(job -> {
+                    foundJob.set(true);
+                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                    if (property != null) { /* only if Gogs secret is defined on the job */
+                        jSecret.set(Secret.toString(property.getGogsSecret())); /* Secret provided by Jenkins */
+                    }
+                });
+            }
+        }
+
+        if (result.getStatus() == 200) {
             String gSecret = null;
             if (getGogsSignature() == null) {
                 gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
@@ -195,8 +217,6 @@ public class GogsWebHook implements UnprotectedRootAction {
                 /* Gogs and Jenkins secrets differs */
                 result.setStatus(403, "Incorrect secret");
             }
-        } else {
-            result.setStatus(404, "No payload or URI contains invalid entries.");
         }
 
         exitWebHook(result, rsp);
@@ -215,8 +235,9 @@ public class GogsWebHook implements UnprotectedRootAction {
         checkNotNull(rsp, "Null reply submitted to doIndex method");
 
         // Get X-Gogs-Event
-        if (!"push".equals(req.getHeader("X-Gogs-Event"))) {
-            result.setStatus(403, "Only push event can be accepted.");
+        xGogsEvent = req.getHeader("X-Gogs-Event");
+        if (!"push".equals(xGogsEvent) && !"release".equals(xGogsEvent)) {
+            result.setStatus(403, "Only push or release events are accepted.");
             exitWebHook(result, rsp);
             return false;
         }

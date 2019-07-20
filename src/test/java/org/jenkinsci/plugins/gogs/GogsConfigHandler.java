@@ -1,13 +1,5 @@
 package org.jenkinsci.plugins.gogs;
 
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-import org.apache.http.HttpHost;
-import org.apache.http.client.fluent.Executor;
-import org.apache.http.client.fluent.Form;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.entity.ContentType;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -16,6 +8,15 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+import org.apache.http.HttpHost;
+import org.apache.http.client.fluent.Executor;
+import org.apache.http.client.fluent.Form;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.entity.ContentType;
 
 /**
  * A class to handle the configuration of the Gogs server used during the integration tests.
@@ -28,7 +29,7 @@ public class GogsConfigHandler {
     private String gogsServer_password;
     private Executor executor = null;
     private String gogsServer_apiUrl = null;
-
+    private String gogsAccessToken;
 
     /**
      * Instantiates an object used to handle operations on a Gogs server.
@@ -46,6 +47,7 @@ public class GogsConfigHandler {
         this.gogsServer_port = aURL.getPort();
         this.gogsServer_user = user;
         this.gogsServer_password = password;
+        this.gogsAccessToken = getGogsAccessToken();
     }
 
     /**
@@ -60,10 +62,10 @@ public class GogsConfigHandler {
         String testUrl = this.getGogsUrl() + "/";
 
         for (int i = 0; i < retries; i++) {
-            int status = 0;
+            int status;
             try {
                 status = Request.Get(testUrl)
-                        .execute().returnResponse().getStatusLine().getStatusCode();
+                                .execute().returnResponse().getStatusLine().getStatusCode();
             } catch (IOException e) {
                 TimeUnit.SECONDS.sleep(retryDelay);
                 continue;
@@ -100,12 +102,16 @@ public class GogsConfigHandler {
                 + "/" + projectName + "/hooks";
 
         Executor executor = getExecutor();
+        Request request = Request.Post(gogsHooksConfigUrl);
+
+        if (gogsAccessToken != null) {
+            request.addHeader("Authorization", "token " + gogsAccessToken);
+        }
 
         String result = executor
-                .execute(Request.Post(gogsHooksConfigUrl).bodyString(jsonCommand, ContentType.APPLICATION_JSON))
+                .execute(request.bodyString(jsonCommand, ContentType.APPLICATION_JSON))
                 .returnContent().asString();
-        JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON(result);
-
+        JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( result );
         return jsonObject.getInt("id");
     }
 
@@ -137,9 +143,14 @@ public class GogsConfigHandler {
                 + "/" + projectName + "/hooks/" + hookId;
 
         Executor executor = getExecutor();
+        Request request = Request.Delete(gogsHooksConfigUrl);
+
+        if (gogsAccessToken != null) {
+            request.addHeader("Authorization", "token " + gogsAccessToken);
+        }
 
         int result = executor
-                .execute(Request.Delete(gogsHooksConfigUrl))
+                .execute(request)
                 .returnResponse().getStatusLine().getStatusCode();
 
         if (result != 204) {
@@ -158,16 +169,20 @@ public class GogsConfigHandler {
 
         Executor executor = getExecutor();
         String gogsHooksConfigUrl = getGogsServer_apiUrl() + "user/repos";
+        Request request = Request.Post(gogsHooksConfigUrl);
+
+        if (this.gogsAccessToken != null) {
+            request.addHeader("Authorization", "token " + this.gogsAccessToken);
+        }
 
         int result = executor
-                .execute(Request
-                        .Post(gogsHooksConfigUrl)
+                .execute(request
                         .bodyForm(Form.form()
-                                .add("name", projectName)
-                                .add("description", "API generated repository")
-                                .add("private", "true")
-                                .add("auto_init", "false")
-                                .build()
+                                      .add("name", projectName)
+                                      .add("description", "API generated repository")
+                                      .add("private", "true")
+                                      .add("auto_init", "false")
+                                      .build()
                         )
                 )
                 .returnResponse().getStatusLine().getStatusCode();
@@ -178,6 +193,20 @@ public class GogsConfigHandler {
         }
     }
 
+    void removeRepo(String projectName) throws IOException {
+        Executor executor = getExecutor();
+        String gogsHookConfigUrl = getGogsServer_apiUrl() + "repos/" + this.gogsServer_user + "/" + projectName;
+        Request request = Request.Delete(gogsHookConfigUrl);
+
+        if (this.gogsAccessToken != null) {
+            request.addHeader("Authorization", "token " + this.gogsAccessToken);
+        }
+
+        int result = executor.execute(request).returnResponse().getStatusLine().getStatusCode();
+        if (result != 204) {
+            throw new IOException("Repository deletion call did not return the expected value (returned " +  result + ")");
+        }
+    }
 
     /**
      * Gets a Executor object. The Executor object allows to cache the authentication data.
@@ -189,10 +218,31 @@ public class GogsConfigHandler {
         if (this.executor == null) {
             HttpHost httpHost = new HttpHost(this.gogsServer_nodeName, this.gogsServer_port);
             this.executor = Executor.newInstance()
-                    .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
-                    .authPreemptive(httpHost);
+                                    .auth(httpHost, this.gogsServer_user, this.gogsServer_password)
+                                    .authPreemptive(httpHost);
         }
         return this.executor;
+    }
+
+    /**
+     * Get Access token of the user.
+     *
+     * @return an access token of the user
+     */
+    public String getGogsAccessToken() {
+        String resp;
+        String sha1 = null;
+        Executor executor = getExecutor();
+        try {
+            resp = executor.execute(
+                    Request.Get(this.getGogsUrl() + "/api/v1/users/" + this.gogsServer_user + "/tokens")
+            ).returnContent().toString();
+            JSONArray jsonArray = JSONArray.fromObject(resp);
+            if (!jsonArray.isEmpty()) {
+                sha1 = ((JSONObject) jsonArray.get(0)).getString("sha1");
+            }
+        } catch (IOException e) { }
+        return sha1;
     }
 
     public String getGogsServer_apiUrl() {
@@ -201,37 +251,4 @@ public class GogsConfigHandler {
         }
         return gogsServer_apiUrl;
     }
-
-    public String getGogsServer_nodeName() {
-        return gogsServer_nodeName;
-    }
-
-    public void setGogsServer_nodeName(String gogsServer_nodeName) {
-        this.gogsServer_nodeName = gogsServer_nodeName;
-    }
-
-    public int getGogsServer_port() {
-        return gogsServer_port;
-    }
-
-    public void setGogsServer_port(int gogsServer_port) {
-        this.gogsServer_port = gogsServer_port;
-    }
-
-    public String getGogsServer_user() {
-        return gogsServer_user;
-    }
-
-    public void setGogsServer_user(String gogsServer_user) {
-        this.gogsServer_user = gogsServer_user;
-    }
-
-    public String getGogsServer_password() {
-        return gogsServer_password;
-    }
-
-    public void setGogsServer_password(String gogsServer_password) {
-        this.gogsServer_password = gogsServer_password;
-    }
-
 }

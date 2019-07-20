@@ -1,15 +1,18 @@
 package org.jenkinsci.plugins.gogs;
 
-import hudson.model.Item;
-import jenkins.model.Jenkins;
-import org.apache.commons.codec.binary.Hex;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import hudson.model.Item;
+import jenkins.model.Jenkins;
+import org.apache.commons.codec.binary.Hex;
 
 class GogsUtils {
 
@@ -23,7 +26,7 @@ class GogsUtils {
      * @return the Job matching the given name, or {@code null} when not found
      */
     static <T extends Item> T find(String jobName, Class<T> type) {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.get();
         // direct search, can be used to find folder based items <folder>/<folder>/<jobName>
         T item = jenkins.getItemByFullName(jobName, type);
         if (item == null) {
@@ -43,7 +46,20 @@ class GogsUtils {
     static Map<String, String> splitQuery(String qs) {
         return Pattern.compile("&").splitAsStream(qs)
                 .map(p -> p.split("="))
-                .collect(Collectors.toMap(a -> a[0], a -> a.length > 1 ? a[1] : ""));
+                .collect(Collectors.toMap(a -> a[0], a -> a.length > 1 ? urlDecode(a[1]) : ""));
+    }
+
+    /**
+     * Decode URL
+     *
+     * @param s String to decode
+     * @return returns decoded string
+     */
+    static String urlDecode(String s) {
+        try {
+            return URLDecoder.decode(s, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException ignored) { }
+        return "";
     }
 
     /**
