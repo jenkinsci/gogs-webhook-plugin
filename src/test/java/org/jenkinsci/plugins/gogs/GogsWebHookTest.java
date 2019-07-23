@@ -224,9 +224,9 @@ public class GogsWebHookTest {
         performDoIndexTest(staplerRequest, staplerResponse, uniqueFile);
 
         //validate that everything was done as planed
-        verify(staplerResponse).setStatus(404);
+        verify(staplerResponse).setStatus(400);
 
-        String expectedOutput = "No payload or URI contains invalid entries.";
+        String expectedOutput = "Invalid JSON";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");

@@ -44,6 +44,7 @@ import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.util.Secret;
+import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.stapler.StaplerRequest;
@@ -106,6 +107,8 @@ public class GogsWebHook implements UnprotectedRootAction {
      */
     @SuppressWarnings("WeakerAccess")
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        JSONObject jsonObject = null;
+
         AtomicReference<String> jSecret = new AtomicReference<>(null);
         AtomicBoolean foundJob = new AtomicBoolean(false);
         AtomicBoolean isRefMatched = new AtomicBoolean(true);
@@ -125,7 +128,13 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
-        JSONObject jsonObject = JSONObject.fromObject(body);
+        try {
+            jsonObject = JSONObject.fromObject(body);
+        } catch (JSONException e) {
+            result.setStatus(400, "Invalid JSON");
+            exitWebHook(result, rsp);
+            return;
+        }
         String ref = jsonObject.optString("ref", null);
 
         if (xGogsEvent.equals("push") && req.getRequestURI().contains("/" + URLNAME + "/") && !body.isEmpty()) {
