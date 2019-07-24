@@ -2,14 +2,15 @@ language: python
 python: '2.7'
 sudo: required
 env:
-- PYTHONUNBUFFERED=1
+  - PYTHONUNBUFFERED=1
+  - MAVEN_OPTS=-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 services:
-- docker
+  - docker
 cache:
   directories:
-  - .autoconf
-  - $HOME/.m2
+    - .autoconf
+    - $HOME/.m2
 install:
-- pip install -U pip
+  - pip install -U pip
 script:
-- mvn clean pre-integration-test -P withIntegrationTest && mvn failsafe:integration-test -P withIntegrationTest
+  - mvn -B clean pre-integration-test -P withIntegrationTest && mvn -B failsafe:integration-test -P withIntegrationTest

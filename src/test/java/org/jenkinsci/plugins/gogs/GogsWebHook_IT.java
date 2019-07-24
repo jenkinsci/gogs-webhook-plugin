@@ -70,6 +70,7 @@ public class GogsWebHook_IT {
     @Test
     public void smokeTest_build_masterBranch() throws Exception {
         final String projectName = "testRep1";
+
         doItTest(JENKINS_JOB_NAME,
                  projectName,
                 "test-project.xml",
