@@ -89,7 +89,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "Only push event can be accepted.";
+        String expectedOutput = "Only push or release events are accepted.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
@@ -110,7 +110,7 @@ public class GogsWebHookTest {
         //validate that everything was done as planed
         verify(staplerResponse).setStatus(403);
 
-        String expectedOutput = "Only push event can be accepted.";
+        String expectedOutput = "Only push or release events are accepted.";
         isExpectedOutput(uniqueFile, expectedOutput);
 
         log.info("Test succeeded.");
