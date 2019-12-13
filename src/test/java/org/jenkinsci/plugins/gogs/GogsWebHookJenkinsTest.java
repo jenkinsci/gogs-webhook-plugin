@@ -1,5 +1,13 @@
 package org.jenkinsci.plugins.gogs;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
@@ -10,14 +18,6 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 
 public class GogsWebHookJenkinsTest {
     final Logger log = LoggerFactory.getLogger(GogsWebHookJenkinsTest.class);

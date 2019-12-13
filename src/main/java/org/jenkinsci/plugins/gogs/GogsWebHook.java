@@ -23,34 +23,32 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URLDecoder;
+import java.util.Map;
+import java.util.Objects;
+import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.util.Secret;
+import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
-import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * @author Alexander Verhaar
@@ -58,8 +56,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Extension
 public class GogsWebHook implements UnprotectedRootAction {
     private final static Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
-    static final String URLNAME = "gogs-webhook";
     private static final String DEFAULT_CHARSET = "UTF-8";
+    private GogsResults result = new GogsResults();
+    private String gogsDelivery = null;
+    private String gogsSignature = null;
+    private String jobName = null;
+    private String xGogsEvent = null;
+    static final String URLNAME = "gogs-webhook";
 
     public String getDisplayName() {
         return null;
@@ -73,20 +76,26 @@ public class GogsWebHook implements UnprotectedRootAction {
         return URLNAME;
     }
 
-    /**
-     * encode sha256 hmac
-     *
-     * @param data data to hex
-     * @param key  key of HmacSHA256
-     * @return a String with the encoded sha256 hmac
-     * @throws Exception Something went wrong getting the sha256 hmac
-     */
-    private static String encode(String data, String key) throws Exception {
-        final Charset asciiCs = Charset.forName("UTF-8");
-        final Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-        final SecretKeySpec secret_key = new javax.crypto.spec.SecretKeySpec(asciiCs.encode(key).array(), "HmacSHA256");
-        sha256_HMAC.init(secret_key);
-        return Hex.encodeHexString(sha256_HMAC.doFinal(data.getBytes("UTF-8")));
+    private String getGogsDelivery() {
+        if (isNullOrEmpty(gogsDelivery)) {
+            return "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
+        }
+        return "Gogs-ID: " + gogsDelivery;
+    }
+
+    private void setGogsDelivery(String gogsDelivery) {
+        this.gogsDelivery = gogsDelivery;
+    }
+
+    private String getGogsSignature() {
+        if (isNullOrEmpty(gogsSignature)) {
+            gogsSignature = null;
+        }
+        return gogsSignature;
+    }
+
+    private void setGogsSignature(String gogsSignature) {
+        this.gogsSignature = gogsSignature;
     }
 
     /**
@@ -96,80 +105,45 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @param rsp response
      * @throws IOException problem while parsing
      */
+    @SuppressWarnings("WeakerAccess")
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
-        GogsResults result = new GogsResults();
+        JSONObject jsonObject = null;
+
+        AtomicReference<String> jSecret = new AtomicReference<>(null);
+        AtomicBoolean foundJob = new AtomicBoolean(false);
+        AtomicBoolean isRefMatched = new AtomicBoolean(true);
+
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
+        GogsCause gogsCause = new GogsCause();
 
-        //Check that we have something to process
-        checkNotNull(req, "Null request submitted to doIndex method");
-        checkNotNull(rsp, "Null reply submitted to doIndex method");
-
-        // Get X-Gogs-Event
-        String event = req.getHeader("X-Gogs-Event");
-        if (!"push".equals(event)) {
-            result.setStatus(403, "Only push event can be accepted.");
-            exitWebHook(result, rsp);
+        if (!sanityChecks(req, rsp)) {
             return;
         }
 
         // Get X-Gogs-Delivery header with deliveryID
-        String gogsDelivery = req.getHeader("X-Gogs-Delivery");
-        if (gogsDelivery == null || gogsDelivery.isEmpty()) {
-            gogsDelivery = "Triggered by Jenkins-Gogs-Plugin. Delivery ID unknown.";
-        } else {
-            gogsDelivery = "Gogs-ID: " + gogsDelivery;
-        }
+        setGogsDelivery(req.getHeader("X-Gogs-Delivery"));
 
         // Get X-Gogs-Signature
-        String gogsSignature = req.getHeader("X-Gogs-Signature");
-        if (gogsSignature == null || gogsSignature.isEmpty()) {
-            gogsSignature = null;
-        }
-
-
-        // Get queryStringMap from the URI
-        String queryString = checkNotNull(req.getQueryString(), "The queryString in the request is null");
-        Map queryStringMap = checkNotNull(splitQuery(queryString), "Null queryStringMap");
-
-        //Do we have the job name parameter ?
-        if (!queryStringMap.containsKey("job")) {
-            result.setStatus(404, "Parameter 'job' is missing.");
-            exitWebHook(result, rsp);
-            return;
-        }
-        Object jobObject = queryStringMap.get("job");
-        String jobName;
-        if (jobObject == null) {
-            result.setStatus(404, "No value assigned to parameter 'job'");
-            exitWebHook(result, rsp);
-            return;
-        } else {
-            jobName = jobObject.toString();
-        }
-
-        final Object branchName = queryStringMap.get("branch");
+        setGogsSignature(req.getHeader("X-Gogs-Signature"));
 
         // Get the POST stream
         String body = IOUtils.toString(req.getInputStream(), DEFAULT_CHARSET);
-        if (!body.isEmpty() && req.getRequestURI().contains("/" + URLNAME + "/")) {
-            JSONObject jsonObject = JSONObject.fromObject(body);
+        try {
+            jsonObject = JSONObject.fromObject(body);
+        } catch (JSONException e) {
+            result.setStatus(400, "Invalid JSON");
+            exitWebHook(result, rsp);
+            return;
+        }
+        String ref = jsonObject.optString("ref", null);
+
+        if (xGogsEvent.equals("push") && req.getRequestURI().contains("/" + URLNAME + "/") && !body.isEmpty()) {
             JSONObject commits = (JSONObject) jsonObject.getJSONArray("commits").get(0);
-            String message = (String) commits.get("message");
+            String message = commits.getString("message");
 
             if (message.startsWith("[IGNORE]")) {
                 // Ignore commits starting with message "[IGNORE]"
                 result.setStatus(200, "Ignoring push");
-                exitWebHook(result, rsp);
-                return;
-            }
-
-            String ref = jsonObject.getString("ref");
-            LOGGER.fine("found ref " + ref);
-            LOGGER.fine("found branch " + branchName);
-            if (null != branchName && !StringUtils.containsIgnoreCase(ref, (String) branchName)) {
-                // ignore all commit if they is not in context
-                LOGGER.fine("build was rejected");
-                result.setStatus(200, String.format("Commit is not relevant. Relevant context is %s", branchName));
                 exitWebHook(result, rsp);
                 return;
             }
@@ -182,62 +156,51 @@ public class GogsWebHook implements UnprotectedRootAction {
                 body = body.substring(8);
             }
 
-            String jSecret = null;
-            boolean foundJob = false;
+            gogsCause.setGogsPayloadData(jsonObject.toString());
+            gogsCause.setDeliveryID(getGogsDelivery());
+            payloadProcessor.setCause(gogsCause);
 
-            // filter branch, if ref not match branch filter, skip trigger job.
-            boolean isRefMatched = true;
+            try (ACLContext ignored = ACL.as(ACL.SYSTEM)) {
+                StringJoiner stringJoiner = new StringJoiner("%2F");
+                Pattern.compile("/").splitAsStream(jsonObject.getString("ref")).skip(2).forEach(stringJoiner::add);
+                String ref_strj = stringJoiner.toString();
 
-
-            payloadProcessor.setPayload("ref", ref);
-            payloadProcessor.setPayload("before", jsonObject.getString("before"));
-
-            SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
-
-            try {
-                Job job = GogsUtils.find(jobName, Job.class);
-
-                if (job != null) {
-                    foundJob = true;
-                    /* secret is stored in the properties of Job */
+                /* secret is stored in the properties of Job */
+                Stream.of(jobName, jobName + "/" + ref_strj).map(j -> GogsUtils.find(j, Job.class)).filter(Objects::nonNull).forEach(job -> {
+                    foundJob.set(true);
                     final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
                     if (property != null) { /* only if Gogs secret is defined on the job */
-                        jSecret = Secret.toString(property.getGogsSecret()); /* Secret provided by Jenkins */
-                        isRefMatched = property.filterBranch(ref);
+                        jSecret.set(Secret.toString(property.getGogsSecret())); /* Secret provided by Jenkins */
+                        isRefMatched.set(property.filterBranch(ref));
                     }
-                } else {
-                    String[] components = ref.split("/");
-                    if (components.length > 3) {
-                        /* refs contains branch/tag with a slash */
-                        List<String> test = Arrays.asList(ref.split("/"));
-                        ref = String.join("%2F", test.subList(2, test.size()));
-                    } else {
-                        ref = components[components.length - 1];
-                    }
-
-                    job = GogsUtils.find(jobName + "/" + ref, Job.class);
-
-                    if (job != null) {
-                        foundJob = true;
-                        /* secret is stored in the properties of Job */
-                        final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
-                        if (property != null) { /* only if Gogs secret is defined on the job */
-                            jSecret = Secret.toString(property.getGogsSecret()); /* Secret provided by Jenkins */
-                            isRefMatched = property.filterBranch(ref);
-                        }
-                    }
-                }
-            } finally {
-                SecurityContextHolder.setContext(saveCtx);
+                });
             }
+        } else {
+            result.setStatus(404, "No payload or URI contains invalid entries.");
+        }
 
+        // Gogs release event
+        if (xGogsEvent.equals("release")) {
+            try (ACLContext ignored = ACL.as(ACL.SYSTEM)) {
+                /* secret is stored in the properties of Job */
+                Stream.of(jobName).map(j -> GogsUtils.find(j, Job.class)).filter(Objects::nonNull).forEach(job -> {
+                    foundJob.set(true);
+                    final GogsProjectProperty property = (GogsProjectProperty) job.getProperty(GogsProjectProperty.class);
+                    if (property != null) { /* only if Gogs secret is defined on the job */
+                        jSecret.set(Secret.toString(property.getGogsSecret())); /* Secret provided by Jenkins */
+                    }
+                });
+            }
+        }
+
+        if (result.getStatus() == 200) {
             String gSecret = null;
-            if (gogsSignature == null) {
+            if (getGogsSignature() == null) {
                 gSecret = jsonObject.optString("secret", null);  /* Secret provided by Gogs < 0.10.x   */
             } else {
                 try {
-                    if (gogsSignature.equals(encode(body, jSecret))) {
-                        gSecret = jSecret;
+                    if (getGogsSignature().equals(GogsUtils.encode(body, jSecret.get()))) {
+                        gSecret = jSecret.get();
                         // now hex is right, continue to old logic
                     }
                 } catch (Exception e) {
@@ -245,29 +208,67 @@ public class GogsWebHook implements UnprotectedRootAction {
                 }
             }
 
-            if (!foundJob) {
+            if (!foundJob.get()) {
                 String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
                 result.setStatus(404, msg);
                 LOGGER.warning(msg);
-            } else if (!isRefMatched) {
+            } else if (!isRefMatched.get()) {
                 String msg = String.format("received ref ('%s') is not matched with branch filter in job '%s'", ref, jobName);
                 result.setStatus(200, msg);
                 LOGGER.info(msg);
-            } else if (isNullOrEmpty(jSecret) && isNullOrEmpty(gSecret)) {
+            } else if (isNullOrEmpty(jSecret.get()) && isNullOrEmpty(gSecret)) {
                 /* No password is set in Jenkins and Gogs, run without secrets */
-                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
-            } else if (!isNullOrEmpty(jSecret) && jSecret.equals(gSecret)) {
+                result = payloadProcessor.triggerJobs(jobName);
+            } else if (!isNullOrEmpty(jSecret.get()) && jSecret.get().equals(gSecret)) {
                 /* Password is set in Jenkins and Gogs, and is correct */
-                result = payloadProcessor.triggerJobs(jobName, gogsDelivery);
+                result = payloadProcessor.triggerJobs(jobName);
             } else {
                 /* Gogs and Jenkins secrets differs */
                 result.setStatus(403, "Incorrect secret");
             }
-        } else {
-            result.setStatus(404, "No payload or URI contains invalid entries.");
         }
 
         exitWebHook(result, rsp);
+    }
+
+    /***
+     * Do sanity checks
+     *
+     * @param req Request
+     * @param rsp Response
+     * @throws IOException Exception
+     */
+    private boolean sanityChecks(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        //Check that we have something to process
+        checkNotNull(req, "Null request submitted to doIndex method");
+        checkNotNull(rsp, "Null reply submitted to doIndex method");
+
+        // Get X-Gogs-Event
+        xGogsEvent = req.getHeader("X-Gogs-Event");
+        if (!"push".equals(xGogsEvent) && !"release".equals(xGogsEvent)) {
+            result.setStatus(403, "Only push or release events are accepted.");
+            exitWebHook(result, rsp);
+            return false;
+        }
+
+        // Get queryStringMap from the URI
+        String queryString = checkNotNull(req.getQueryString(), "The queryString in the request is null");
+        Map queryStringMap = checkNotNull(GogsUtils.splitQuery(queryString), "Null queryStringMap");
+
+        //Do we have the job name parameter ?
+        if (!queryStringMap.containsKey("job")) {
+            result.setStatus(404, "Parameter 'job' is missing.");
+            exitWebHook(result, rsp);
+            return false;
+        }
+
+        jobName = queryStringMap.get("job").toString();
+        if (isNullOrEmpty(jobName)) {
+            result.setStatus(404, "No value assigned to parameter 'job'");
+            exitWebHook(result, rsp);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -287,28 +288,6 @@ public class GogsWebHook implements UnprotectedRootAction {
         resp.addHeader("Content-Type", "application/json");
         PrintWriter printer = resp.getWriter();
         printer.print(json.toString());
-    }
-
-    /**
-     * Converts Querystring into Map<String,String>
-     *
-     * @param qs Querystring
-     * @return returns map from querystring
-     */
-    private static Map<String, String> splitQuery(String qs) throws UnsupportedEncodingException {
-        final Map<String, String> query_pairs = new LinkedHashMap<>();
-        final String[] pairs = qs.split("&");
-        for (String pair : pairs) {
-            final int idx = pair.indexOf("=");
-            final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), DEFAULT_CHARSET) : pair;
-            final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), DEFAULT_CHARSET) : null;
-            query_pairs.put(key, value);
-        }
-        return query_pairs;
-    }
-
-    private boolean isNullOrEmpty(String s) {
-        return s == null || s.trim().isEmpty();
     }
 }
 

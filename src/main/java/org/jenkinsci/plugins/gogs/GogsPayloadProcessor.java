@@ -24,65 +24,55 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package org.jenkinsci.plugins.gogs;
 
 import hudson.model.BuildableItem;
-import hudson.model.Cause;
 import hudson.security.ACL;
-import hudson.triggers.Trigger;
-import jenkins.model.ParameterizedJobMixIn;
+import hudson.security.ACLContext;
 import jenkins.triggers.SCMTriggerItem;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
+
+import static jenkins.model.ParameterizedJobMixIn.ParameterizedJob;
 
 class GogsPayloadProcessor {
     private static final Logger LOGGER = Logger.getLogger(GogsPayloadProcessor.class.getName());
-    private final Map<String, String> payload = new HashMap<>();
+    private GogsCause gogsCause = new GogsCause();
 
     GogsPayloadProcessor() {
     }
 
-    public void setPayload(String k, String v) {
-        this.payload.put(k, v);
+    public void setCause(GogsCause gogsCause) {
+        this.gogsCause = gogsCause;
     }
 
-    public GogsResults triggerJobs(String jobName, String deliveryID) {
-        SecurityContext saveCtx = ACL.impersonate(ACL.SYSTEM);
+    public GogsResults triggerJobs(String jobName) {
+        AtomicBoolean jobdone = new AtomicBoolean(false);
         GogsResults result = new GogsResults();
 
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             BuildableItem project = GogsUtils.find(jobName, BuildableItem.class);
             if (project != null) {
-                GogsTrigger gTrigger = null;
-                Cause cause = new GogsCause(deliveryID);
 
-                if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
-                    ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
-                    for (Trigger trigger : pJob.getTriggers().values()) {
-                        if (trigger instanceof GogsTrigger) {
-                            gTrigger = (GogsTrigger) trigger;
-                            break;
-                        }
-                    }
+                if (project instanceof ParameterizedJob) {
+                    ParameterizedJob pJob = (ParameterizedJob) project;
+                    pJob.getTriggers().values().stream()
+                            .filter(trigger1 -> trigger1 instanceof GogsTrigger).findFirst()
+                            .ifPresent((g) -> {
+//                                GogsPayload gogsPayload = new GogsPayload(this.payload);
+                                GogsPayload gogsPayload = new GogsPayload(this.gogsCause);
+                                Optional.ofNullable(SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project))
+                                        .ifPresent((item) -> {
+                                            item.scheduleBuild2(0, gogsPayload);
+                                            jobdone.set(true);
+                                        });
+                            });
                 }
-
-                if (gTrigger != null) {
-                    SCMTriggerItem item = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                    GogsPayload gogsPayload = new GogsPayload(this.payload);
-                    if (item != null) {
-                        item.scheduleBuild2(0, gogsPayload);
-                    }
-                } else {
-                    project.scheduleBuild(0, cause);
+                if (!jobdone.get()) {
+                    project.scheduleBuild(0, gogsCause);
+                    jobdone.set(true);
                 }
-                result.setMessage(String.format("Job '%s' is executed", jobName));
-            } else {
-                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
-                result.setStatus(404, msg);
-                LOGGER.warning(msg);
             }
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
@@ -90,7 +80,13 @@ class GogsPayloadProcessor {
             e.printStackTrace(pw);
             LOGGER.severe(sw.toString());
         } finally {
-            SecurityContextHolder.setContext(saveCtx);
+            if (jobdone.get()) {
+                result.setMessage(String.format("Job '%s' is executed", jobName));
+            } else {
+                String msg = String.format("Job '%s' is not defined in Jenkins", jobName);
+                result.setStatus(404, msg);
+                LOGGER.warning(msg);
+            }
         }
 
         return result;

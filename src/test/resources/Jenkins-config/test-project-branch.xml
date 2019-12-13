@@ -7,6 +7,9 @@
         <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
             <triggers/>
         </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+        <org.jenkinsci.plugins.gogs.GogsProjectProperty>
+            <gogsBranchFilter>test</gogsBranchFilter>
+        </org.jenkinsci.plugins.gogs.GogsProjectProperty>
     </properties>
     <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@2.30">
         <scm class="hudson.plugins.git.GitSCM" plugin="git@3.3.0">

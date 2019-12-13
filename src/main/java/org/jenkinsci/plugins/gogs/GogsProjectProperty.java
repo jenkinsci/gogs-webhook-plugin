@@ -23,6 +23,8 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
+import java.util.logging.Logger;
+
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.JobProperty;
@@ -32,10 +34,10 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-import java.util.logging.Logger;
-
 @SuppressWarnings("ALL")
 public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
+    private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
+
     private final Secret gogsSecret;
     private final boolean gogsUsePayload;
     private final String gogsBranchFilter;
@@ -61,7 +63,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
     }
 
     public String getGogsBranchFilter() {
-        return this.gogsBranchFilter;
+        return gogsBranchFilter;
     }
 
     public boolean getHasBranchFilter() {
@@ -74,8 +76,6 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
         }
         return true;
     }
-
-    private static final Logger LOGGER = Logger.getLogger(GogsWebHook.class.getName());
 
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
@@ -105,6 +105,7 @@ public class GogsProjectProperty extends JobProperty<Job<?, ?>> {
                         formData.getJSONObject(GOGS_PROJECT_BLOCK_NAME)
                 );
             }
+
             if (tpp != null) {
                 LOGGER.finest(formData.toString());
                 LOGGER.finest(tpp.gogsBranchFilter);

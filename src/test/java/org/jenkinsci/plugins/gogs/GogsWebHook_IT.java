@@ -143,7 +143,7 @@ public class GogsWebHook_IT {
         log.info("Commit" + commit.getName());
 
         //push
-        UsernamePasswordCredentialsProvider user2 = new UsernamePasswordCredentialsProvider("butler", "butler");
+        UsernamePasswordCredentialsProvider user2 = new UsernamePasswordCredentialsProvider(GOGS_USER, GOGS_PASSWORD);
 
         if (branch == null) {
             refSpec.append("master");
