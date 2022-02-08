@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 /*
  *  Class to test gogs webhook in cooperation with other plugins
@@ -32,7 +34,7 @@ public class GogsWebHookPluginsTest {
         FreeStyleProject project = folder.createProject(FreeStyleProject.class, PROJECTNAME);
 
         Job job = GogsUtils.find(FOLDERNAME + "/" + PROJECTNAME, Job.class);
-        assertEquals("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, project);
+        assertThat("Couldn't find " + FOLDERNAME + "/" + PROJECTNAME, job, is(equalTo(project)));
     }
 
     //

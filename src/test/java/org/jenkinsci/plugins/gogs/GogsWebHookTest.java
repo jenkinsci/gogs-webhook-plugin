@@ -1,5 +1,8 @@
 package org.jenkinsci.plugins.gogs;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
@@ -255,7 +258,7 @@ public class GogsWebHookTest {
         String output = FileUtils.readFileToString(uniqueFile, "utf-8");
         uniqueFile.delete();
         String completeExpectedOutput = "{\"result\":\"ERROR\",\"message\":\"" + expectedOutput + "\"}";
-        assertEquals("Not the expected output file content", completeExpectedOutput, output);
+        assertThat("Not the expected output file content", output, is(equalTo(completeExpectedOutput)));
     }
 
 

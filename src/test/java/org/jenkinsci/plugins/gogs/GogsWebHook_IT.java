@@ -3,8 +3,10 @@ package org.jenkinsci.plugins.gogs;
 import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_BRANCH_SECTION;
 import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_REMOTE_SECTION;
 import static org.eclipse.jgit.lib.ConfigConstants.CONFIG_USER_SECTION;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 import static org.jenkinsci.plugins.gogs.JenkinsHandler.waitUntilJenkinsHasBeenStartedUp;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedWriter;
@@ -190,7 +192,7 @@ public class GogsWebHook_IT {
         Properties markerAsProperty = loadMarkerArtifactAsProperty(jenkins, jenkinsJobName);
         String buildedCommit = markerAsProperty.getProperty("GIT_COMMIT");
 
-        assertEquals("Not the expected GIT commit", commit.getName(), buildedCommit);
+        assertThat("Not the expected GIT commit", commit.getName(), is(equalTo(buildedCommit)));
 
         //add the trigger to Gogs
         File jsonCommandFile = new File(JSON_COMMANDFILE_PATH + webhookDefinition);
@@ -222,7 +224,7 @@ public class GogsWebHook_IT {
             //Get the data we stored in the marker file and check it
             Properties hookMarkerAsProperty = loadMarkerArtifactAsProperty(jenkins, jenkinsJobName);
             String hookBuildedCommit = hookMarkerAsProperty.getProperty("GIT_COMMIT");
-            assertEquals("Not the expected GIT commit", commitForHook.getName(), hookBuildedCommit);
+            assertThat("Not the expected GIT commit", commitForHook.getName(), is(equalTo(hookBuildedCommit)));
         } finally {
             // Cleanup the mess we made
             gogsServer.removeHook(projectName, hookId);
@@ -246,11 +248,11 @@ public class GogsWebHook_IT {
         log.info("BuildNbr we are examining: " + buildNbr);
 
         List<Artifact> artifactList = lastBuild.getArtifacts();
-        assertEquals("Not the expected number of artifacts", 1, artifactList.size());
+        assertThat("Not the expected number of artifacts", artifactList.size(), is(equalTo(1)));
 
         Artifact markerArtifact = artifactList.get(0);
         String markerArtifactFileName = markerArtifact.getFileName();
-        assertEquals("The artifact is not the expected one", "marker.txt", markerArtifactFileName);
+        assertThat("The artifact is not the expected one", markerArtifactFileName, is(equalTo("marker.txt")));
         InputStream markerArtifactInputStream = lastBuild.details().downloadArtifact(markerArtifact);
         String markerAsText = IOUtils.toString(markerArtifactInputStream, Charset.defaultCharset());
         log.info("\n" + markerAsText);
@@ -261,7 +263,7 @@ public class GogsWebHook_IT {
         //check if the marker matches the build number we expect.
         String buildNbrFromMarker = markerAsProperty.getProperty("BUILD_NUMBER");
         String buildNbrFromQery = String.valueOf(buildNbr);
-        assertEquals("The build number from the marker does not match the last build number", buildNbrFromMarker, buildNbrFromQery);
+        assertThat("The build number from the marker does not match the last build number", buildNbrFromMarker, is(equalTo(buildNbrFromQery)));
         return markerAsProperty;
     }
 
