@@ -3,8 +3,7 @@ package org.jenkinsci.plugins.gogs;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +19,7 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
@@ -52,30 +52,24 @@ public class GogsWebHookTest {
     public void callDoIndexWithNullReqMessageMustThrowException() throws IOException {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
-        try {
-            gogsWebHook.internalDoIndex(new GogsResults(),null, staplerResponse);
-        } catch (NullPointerException e) {
-            String expectedErrMsg = "Null request submitted to doIndex method";
-            assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
-            log.info("call failed as expected.");
-            return;
-        }
-        fail("The call should have failed.");
+
+        final Executable testMethod = () -> {
+            gogsWebHook.internalDoIndex(new GogsResults(), null, staplerResponse);
+        };
+        final NullPointerException thrown = assertThrows(NullPointerException.class, testMethod);
+        assertThat("Not the expected error message.", thrown.getMessage(), is(equalTo("Null request submitted to doIndex method")));
     }
 
     @Test
     public void callDoIndexWithNullResponseMessageMustThrowException() throws IOException {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
-        try {
+
+        final Executable testMethod = () -> {
             gogsWebHook.internalDoIndex(new GogsResults(), staplerRequest, null);
-        } catch (NullPointerException e) {
-            String expectedErrMsg = "Null reply submitted to doIndex method";
-            assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
-            log.info("call failed as expected.");
-            return;
-        }
-        fail("The call should have failed.");
+        };
+        final NullPointerException thrown = assertThrows(NullPointerException.class, testMethod);
+        assertThat("Not the expected error message.", thrown.getMessage(), is(equalTo("Null reply submitted to doIndex method")));
     }
 
     @Test
@@ -129,16 +123,11 @@ public class GogsWebHookTest {
         when(staplerRequest.getQueryString()).thenReturn(null);
         GogsWebHook gogsWebHook = new GogsWebHook();
 
-
-        try {
+        final Executable testMethod = () -> {
             gogsWebHook.internalDoIndex(new GogsResults(), staplerRequest, staplerResponse);
-        } catch (NullPointerException e) {
-            String expectedErrMsg = "The queryString in the request is null";
-            assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
-            log.info("call failed as expected.");
-            return;
-        }
-        fail("The call should have failed.");
+        };
+        final NullPointerException thrown = assertThrows(NullPointerException.class, testMethod);
+        assertThat("Not the expected error message.", thrown.getMessage(), is(equalTo("The queryString in the request is null")));
     }
 
 
