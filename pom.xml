@@ -268,9 +268,8 @@
   </pluginRepositories>
 
   <scm>
-    <connection>scm:git:ssh://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
+    <connection>scm:git:https://github.com/jenkinsci/gogs-webhook-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/gogs-webhook-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/gogs-webhook-plugin</url>
-    <tag>gogs-webhook-1.0.1</tag>
   </scm>
 </project>
