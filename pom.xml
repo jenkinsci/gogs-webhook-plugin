@@ -89,16 +89,9 @@
       <artifactId>symbol-annotation</artifactId>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
@@ -204,6 +197,13 @@
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-2.289.x</artifactId>
         <version>961.vf0c9f6f59827</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>5.8.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
