@@ -50,7 +50,7 @@ public class GogsWebHookTest {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
         try {
-            gogsWebHook.doIndex(null, staplerResponse);
+            gogsWebHook.internalDoIndex(new GogsResults(),null, staplerResponse);
         } catch (NullPointerException e) {
             String expectedErrMsg = "Null request submitted to doIndex method";
             assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
@@ -65,7 +65,7 @@ public class GogsWebHookTest {
         GogsWebHook gogsWebHook = new GogsWebHook();
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         try {
-            gogsWebHook.doIndex(staplerRequest, null);
+            gogsWebHook.internalDoIndex(new GogsResults(), staplerRequest, null);
         } catch (NullPointerException e) {
             String expectedErrMsg = "Null reply submitted to doIndex method";
             assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());
@@ -128,7 +128,7 @@ public class GogsWebHookTest {
 
 
         try {
-            gogsWebHook.doIndex(staplerRequest, staplerResponse);
+            gogsWebHook.internalDoIndex(new GogsResults(), staplerRequest, staplerResponse);
         } catch (NullPointerException e) {
             String expectedErrMsg = "The queryString in the request is null";
             assertEquals("Not the expected error message.", expectedErrMsg, e.getMessage());

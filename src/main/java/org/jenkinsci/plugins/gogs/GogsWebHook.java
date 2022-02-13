@@ -97,7 +97,22 @@ public class GogsWebHook implements UnprotectedRootAction {
      * @throws IOException problem while parsing
      */
     public void doIndex(StaplerRequest req, StaplerResponse rsp) throws IOException {
+
         GogsResults result = new GogsResults();
+
+        try {
+            internalDoIndex(result, req, rsp);
+
+        } catch (final RuntimeException re) {
+            LOGGER.severe(re.toString());
+            result.setStatus(500, "GogsWebHook execution error.");
+            exitWebHook(result, rsp);
+            return;
+        }
+    }
+
+    void internalDoIndex(GogsResults result, StaplerRequest req, StaplerResponse rsp) throws IOException {
+
         GogsPayloadProcessor payloadProcessor = new GogsPayloadProcessor();
 
         //Check that we have something to process
