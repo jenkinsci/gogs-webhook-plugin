@@ -53,12 +53,6 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jenkins-ci</groupId>
-          <artifactId>symbol-annotation</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -86,10 +80,6 @@
       <artifactId>bridge-method-annotation</artifactId>
       <version>1.18</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci</groupId>
-      <artifactId>symbol-annotation</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
