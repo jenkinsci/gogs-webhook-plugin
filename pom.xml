@@ -69,14 +69,8 @@
       <artifactId>jsch</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>4.5.13</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpcore</artifactId>
-      <version>4.4.14</version>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>apache-httpcomponents-client-4-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
@@ -126,17 +120,6 @@
       <artifactId>guava</artifactId>
       <version>25.0-jre</version>
       <!--<scope>test</scope>-->
-    </dependency>
-    <!--<dependency>-->
-    <!--<groupId>org.apache.httpcomponents</groupId>-->
-    <!--<artifactId>httpclient</artifactId>-->
-    <!--<version>4.5.3</version>-->
-    <!--<scope>test</scope>-->
-    <!--</dependency>-->
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>fluent-hc</artifactId>
-      <version>4.5.13</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jgit</groupId>
