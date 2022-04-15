@@ -27,6 +27,7 @@ import hudson.model.BuildableItem;
 import hudson.model.Cause;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
+import hudson.triggers.TriggerDescriptor;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
@@ -61,7 +62,8 @@ class GogsPayloadProcessor {
 
                 if (project instanceof ParameterizedJobMixIn.ParameterizedJob) {
                     ParameterizedJobMixIn.ParameterizedJob pJob = (ParameterizedJobMixIn.ParameterizedJob) project;
-                    for (Trigger trigger : pJob.getTriggers().values()) {
+                    Map<TriggerDescriptor, Trigger> triggers = pJob.getTriggers();
+                    for (Trigger trigger : triggers.values()) {
                         if (trigger instanceof GogsTrigger) {
                             gTrigger = (GogsTrigger) trigger;
                             break;

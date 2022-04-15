@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 //FIXME: the test should run in sequence
 
 public class GogsWebHook_IT {
+
     private static final String JENKINS_URL = "http://localhost:8080/";
     private static final String JENKINS_USER = "butler";
     private static final String JENKINS_PASSWORD = "butler";
@@ -180,7 +181,7 @@ public class GogsWebHook_IT {
         log.info("Next build number: " + expectedBuildNbr);
 
         //Build the job
-        jobAtIntitalState.build();
+        jobAtIntitalState.build(true);
 
         //Wait for the job to complete
         long timeOut = 60000L;
@@ -314,6 +315,5 @@ public class GogsWebHook_IT {
             }
         }
     }
-
 
 }
