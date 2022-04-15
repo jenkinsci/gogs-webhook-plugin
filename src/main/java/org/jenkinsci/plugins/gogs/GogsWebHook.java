@@ -23,19 +23,7 @@ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package org.jenkinsci.plugins.gogs;
 
-import hudson.Extension;
-import hudson.model.Job;
-import hudson.model.UnprotectedRootAction;
-import hudson.security.ACL;
-import hudson.util.Secret;
-import net.sf.json.JSONObject;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -50,7 +38,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import hudson.Extension;
+import hudson.model.Job;
+import hudson.model.UnprotectedRootAction;
+import hudson.security.ACL;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * @author Alexander Verhaar
@@ -121,8 +121,8 @@ public class GogsWebHook implements UnprotectedRootAction {
 
         // Get X-Gogs-Event
         String event = req.getHeader("X-Gogs-Event");
-        if (!"push".equals(event)) {
-            result.setStatus(403, "Only push event can be accepted.");
+        if (!"push".equals(event) && !"release".equals(event)) {
+            result.setStatus(403, "Only push or release events are accepted.");
             exitWebHook(result, rsp);
             return;
         }
