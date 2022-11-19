@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -78,7 +79,7 @@ public class GogsWebHookTest {
     @Test
     public void whenEmptyHeaderTypeMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
@@ -98,7 +99,7 @@ public class GogsWebHookTest {
     @Test
     public void whenWrongHeaderTypeMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
@@ -142,7 +143,7 @@ public class GogsWebHookTest {
     @Test
     public void whenNoJobInQueryStringMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
@@ -164,7 +165,7 @@ public class GogsWebHookTest {
     @Test
     public void whenEmptyJobInQueryStringMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
@@ -186,7 +187,7 @@ public class GogsWebHookTest {
     @Test
     public void whenEmptyJob2InQueryStringMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
@@ -208,7 +209,7 @@ public class GogsWebHookTest {
     @Test
     public void whenUriDoesNotContainUrlNameMustReturnError() throws Exception {
         //Prepare the SUT
-        File uniqueFile = File.createTempFile("webHookTest_", ".txt", new File("target"));
+        File uniqueFile = Files.createTempFile(new File("target").toPath(), "webHookTest_", ".txt").toFile();
 
         StaplerRequest staplerRequest = Mockito.mock(RequestImpl.class);
         StaplerResponse staplerResponse = Mockito.mock(ResponseImpl.class);
