@@ -1,6 +1,6 @@
 package org.jenkinsci.plugins.gogs;
 
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlPage;
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
 import org.apache.commons.io.FileUtils;
